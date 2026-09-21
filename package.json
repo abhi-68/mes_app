@@ -1,0 +1,50 @@
+{
+  "name": "mes-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:studio": "drizzle-kit studio",
+    "test": "node scripts/run-tests.mjs",
+    "test:setup": "node scripts/setup-db.mjs --test",
+    "db:setup": "node scripts/setup-db.mjs",
+    "simulate": "node scripts/simulate.mjs",
+    "walk": "node scripts/walk.mjs",
+    "verify:labels": "tsx scripts/verify-labels.mts",
+    "audit": "node --import tsx --experimental-test-module-mocks scripts/audit.mts",
+    "db:demo": "node scripts/setup-db.mjs --clean"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.2",
+    "next": "16.3.5",
+    "next-auth": "^5.0.0-beta.32",
+    "pg": "^8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.6.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "playwright": "^1.63.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "bwip-js": "^4.11.4"
+  }
+}

@@ -1,0 +1,84 @@
+Thermal Corp MES — test run
+
+PostgreSQL : psql (PostgreSQL) 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
+Node       : v22.22.2
+Commit     : 4fec21b
+Date       : 2026-09-14 22:11 UTC
+Command    : npm test   (one process per file, sequential)
+
+== results ==
+ok 1 - A1 — competing reservations genuinely overlap; the second blocks on the lock
+ok 2 - many simultaneous reservations for one unit yield exactly one winner
+ok 1 - sequential competition for the last motor leaves exactly one commitment
+ok 2 - A2i — replaying an identical material issue applies once
+ok 3 - A3i — a legitimate second partial material issue is additive
+ok 4 - A4 — reusing a command id with a different payload is rejected (material issue)
+ok 5 - A5 — a failed command leaves nothing partially applied
+ok 6 - A6 — stock cannot go negative
+ok 7 - A6b — an unreserved issue cannot take another order's reserved stock
+ok 8 - A6c — coverage is zero after the reservation is fully issued
+ok 9 - A6d — the reservation's owner can issue it; another order cannot
+ok 10 - returns raise the uncovered quantity again
+ok 11 - ledger and balances reconcile after a full cycle
+ok 12 - partial reservation records a shortage rather than failing
+ok 1 - A2 — replaying an identical production report applies once
+ok 2 - A3 — a legitimate second partial production report is additive
+ok 3 - A4 — reusing a command id with a different quantity is rejected (production report)
+ok 4 - A7b — new output is pendingInspection, neither usable nor scrap
+ok 5 - issue to parent then return restores usable output
+ok 6 - returned output can be reissued
+ok 7 - accept, rework, then re-accept does not invent a second unit
+ok 8 - A8c — rejecting an installed component keeps its installation history
+ok 9 - A13b — dependency stays satisfied after the allocation is consumed
+ok 10 - A7 — allocation, not global accepted, decides who is ready
+ok 11 - A6e — held stock can be neither reserved nor issued
+ok 12 - A6f — releasing a hold restores availability exactly once
+ok 13 - a reservation owner still cannot draw stock that is on hold
+ok 14 - A6g — a hold releases the reservations it invalidates
+ok 15 - reconciliation checks stock, reservations and holds against their own histories
+ok 1 - successful start: one motor issued, task started, clock running, event written
+ok 2 - duplicate request with the SAME command id consumes material once
+ok 3 - a NEW command id does not let the same start consume twice
+ok 4 - insufficient stock: task does not start and nothing is consumed
+ok 5 - held stock: task does not start even though stock physically exists
+ok 6 - rollback: a failure mid-action leaves no partial state
+ok 7 - authorization: a worker cannot start a step at another station
+ok 8 - authorization: a supervisor may start a step at any station
+ok 9 - authorization: an unauthenticated caller is refused
+total 38  pass 38  fail 0
+
+== browser demonstration (scripts/demo-cutover.mjs, against the running app) ==
+1. Worker signs in at Fan & Motor Assembly
+   fan wheels on hand before: 4, issue movements: 0
+2. Worker taps Start on the first ready step
+   fan wheels on hand after:  3, issue movements: 1
+   -> consumed 1, wrote 1 issue movement(s)
+3. Worker marks the first step done
+4. Emptying stock of the motor the NEXT step needs
+5. Worker taps Start on the step whose motor is gone
+   message shown to the worker: "Short 1 of the material this step needs"
+   step status before: PENDING, after: PENDING
+   motor stock: 0 (nothing drawn)
+
+== mutation checks ==
+  ALL row locks removed                     -> fails concurrency A1 + contention test
+                                               (the OLD A1 passed this, which is why it
+                                                was replaced)
+  unreserved issue ignores heldQty          -> fails A6e
+  hold leaves stale reservations standing   -> fails A6g
+  reserved issue uses the unreserved guard  -> fails 7 tests incl. A6d
+  availableNow ignores heldQty              -> fails A6e, A6f
+  returns do not relieve installed quantity -> fails issue-return, reissue
+  dependency ignores installed quantity     -> fails A13b
+  coverage = required - reserved            -> fails A6c, returns
+  replay protection disabled                -> fails A2i
+
+== legacy write path ==
+inventory_items and stock_transactions are DELETED from the schema. Grep for writes to
+inventory outside src/lib/inventory.ts returns only a read in src/app/inventory/page.tsx.
+
+== still not implemented ==
+Operation dependencies (sequence gating is still in use), revision freezing at release,
+scoped permissions with many-to-many station assignment, and the time-correction
+request/approve flow. A13b proves the dependency CALCULATION; it does not prove an
+operation state workflow that does not yet exist.

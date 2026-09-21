@@ -1,0 +1,788 @@
+<title>Where Work Changes Hands</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+>
+
+<style>
+  /* Same tokens as the role map, so the two pages read as one set. */
+  :root {
+    --navy-900: #0d2440;
+    --navy-700: #1f4a7a;
+
+    --ground: #f2f4f7;
+    --surface: #ffffff;
+    --surface-2: #f8f9fb;
+    --line: #dfe3ea;
+    --line-soft: #e9ecf1;
+
+    --ink: #171b22;
+    --ink-2: #4c5364;
+    --ink-3: #6f7788;
+    --ink-4: #99a0af;
+
+    --worker: #7f8f10;
+    --worker-bg: #f4f7dd;
+    --worker-line: #b3c528;
+
+    --super: #1f4a7a;
+    --super-bg: #e6eef6;
+    --super-line: #4a7cae;
+
+    --admin: #8a5a09;
+    --admin-bg: #fbf0da;
+    --admin-line: #d4900f;
+
+    --gap: #9c2a1c;
+    --gap-bg: #fbe9e7;
+
+    --shadow: 0 1px 2px rgb(13 36 64 / .05), 0 1px 3px rgb(13 36 64 / .05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0b1119;
+      --surface: #141b25;
+      --surface-2: #101720;
+      --line: #27303d;
+      --line-soft: #1f2833;
+      --ink: #e8ecf2;
+      --ink-2: #b3bcca;
+      --ink-3: #8d97a7;
+      --ink-4: #6b7585;
+      --worker: #c2d62e;
+      --worker-bg: #23290d;
+      --worker-line: #8ea019;
+      --super: #8ab6e4;
+      --super-bg: #142334;
+      --super-line: #366da8;
+      --admin: #e3ab3d;
+      --admin-bg: #2c2109;
+      --admin-line: #9c7014;
+      --gap: #e8897c;
+      --gap-bg: #2e1512;
+      --shadow: 0 1px 2px rgb(0 0 0 / .4);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0b1119;
+    --surface: #141b25;
+    --surface-2: #101720;
+    --line: #27303d;
+    --line-soft: #1f2833;
+    --ink: #e8ecf2;
+    --ink-2: #b3bcca;
+    --ink-3: #8d97a7;
+    --ink-4: #6b7585;
+    --worker: #c2d62e;
+    --worker-bg: #23290d;
+    --worker-line: #8ea019;
+    --super: #8ab6e4;
+    --super-bg: #142334;
+    --super-line: #366da8;
+    --admin: #e3ab3d;
+    --admin-bg: #2c2109;
+    --admin-line: #9c7014;
+    --gap: #e8897c;
+    --gap-bg: #2e1512;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+      Roboto, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin-inline: auto;
+    padding-inline: 20px;
+    padding-block: 40px 72px;
+  }
+
+  h1, h2, h3 { margin: 0; letter-spacing: -.018em; text-wrap: balance; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  .eyebrow {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+  }
+
+  /* ---------------- masthead ---------------- */
+  .masthead {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 26px;
+  }
+  .rule {
+    flex: none;
+    width: 5px;
+    align-self: stretch;
+    min-height: 56px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #c2d62e, #a8ba22);
+  }
+  .masthead h1 { font-size: clamp(1.7rem, 4.4vw, 2.3rem); line-height: 1.12; font-weight: 700; }
+  .masthead p { margin: 10px 0 0; max-width: 64ch; color: var(--ink-3); }
+
+  /* ---------------- figure ---------------- */
+  figure { margin: 34px 0 0; }
+  .figbox {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 20px 16px 8px;
+    overflow-x: auto;
+  }
+  .figbox svg { display: block; width: 100%; min-width: 620px; height: auto; }
+  figcaption {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--ink-3);
+    max-width: 72ch;
+  }
+
+  /* ---------------- lanes ---------------- */
+  .section { margin-top: 52px; }
+  .section > h2 { font-size: clamp(1.15rem, 2.6vw, 1.4rem); font-weight: 700; }
+  .section > .lede { margin: 9px 0 0; max-width: 70ch; color: var(--ink-3); font-size: 14px; }
+
+  .lane {
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent-line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .lane[data-role="worker"] { --accent: var(--worker); --accent-line: var(--worker-line); --accent-bg: var(--worker-bg); }
+  .lane[data-role="super"]  { --accent: var(--super);  --accent-line: var(--super-line);  --accent-bg: var(--super-bg); }
+  .lane[data-role="admin"]  { --accent: var(--admin);  --accent-line: var(--admin-line);  --accent-bg: var(--admin-bg); }
+
+  .lane-head { padding: 15px 18px 13px; border-bottom: 1px solid var(--line-soft); }
+  .lane-head h3 { font-size: 16px; font-weight: 700; color: var(--accent); }
+  .lane-head p { margin: 5px 0 0; font-size: 13px; color: var(--ink-3); }
+
+  ol.flow { list-style: none; margin: 0; padding: 6px 0; }
+  ol.flow > li {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 12px;
+    padding: 11px 18px;
+    border-top: 1px solid var(--line-soft);
+  }
+  ol.flow > li:first-child { border-top: 0; }
+  .n {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-4);
+    padding-top: 2px;
+  }
+  .what { font-size: 14px; font-weight: 600; }
+  .how { margin-top: 3px; font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+  .where {
+    margin-top: 4px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--ink-4);
+  }
+
+  /* a step that hands off to someone else */
+  .handoff {
+    margin-top: 7px;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px;
+    background: var(--accent-bg);
+    border-radius: 7px;
+    padding: 5px 9px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+  }
+  .handoff b { color: var(--accent); font-weight: 600; }
+  .handoff .arrow { color: var(--ink-4); }
+
+  /* ---------------- handoff table ---------------- */
+  .tablebox {
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  table { width: 100%; min-width: 660px; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 11px 16px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 12px 16px;
+    font-size: 13.5px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--ink-2);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.pair { white-space: nowrap; font-weight: 600; color: var(--ink); }
+  td.pair .to { color: var(--ink-3); font-weight: 400; }
+  .tag {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tag.stored { background: var(--super-bg); color: var(--super); }
+  .tag.derived { background: var(--worker-bg); color: var(--worker); }
+  .tag.queue { background: var(--surface-2); color: var(--ink-3); }
+  .tag.none { background: var(--gap-bg); color: var(--gap); }
+
+  /* ---------------- gaps ---------------- */
+  .notecards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--gap);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .note .n2 { font-weight: 600; font-size: 13.5px; }
+  .note p { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+
+  footer {
+    margin-top: 52px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-4);
+    max-width: 78ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="rule" aria-hidden="true"></span>
+    <div>
+      <p class="eyebrow">Thermal Corp MES</p>
+      <h1>Where work changes hands</h1>
+      <p>
+        What each role does in order, and every point at which one person's action lands on
+        somebody else's screen. Read from the code and confirmed by an end-to-end run that
+        drives these screens as all three roles.
+      </p>
+    </div>
+  </header>
+
+  <figure>
+    <div class="figbox">
+      <svg
+        viewBox="0 0 900 370"
+        role="img"
+        aria-label="Admin configures the process and releases an order; steps land in each station's queue; a worker finishing a sub-assembly hands the part to the next station together with a ready alert; a worker who cannot continue raises a blocked alert to the supervisor, who unblocks it and can act at any station."
+      >
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+          <marker id="a-hot" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#c4382a" />
+          </marker>
+        </defs>
+
+        <!-- Supervisor band -->
+        <rect x="50" y="50" width="820" height="74" rx="12"
+              fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5" />
+        <text x="70" y="78" font-size="14" font-weight="700" fill="currentColor">Supervisor</text>
+        <text x="70" y="100" font-size="12" fill="currentColor" opacity="0.7">
+          sees every station · clears blocks · reads the clock · raises orders
+        </text>
+
+        <!-- Cross-lane edges -->
+        <g fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.85">
+          <line x1="160" y1="275" x2="250" y2="275" marker-end="url(#a)" />
+          <line x1="740" y1="275" x2="788" y2="275" opacity="0.45" marker-end="url(#a)" />
+          <path d="M640 240 L640 126" marker-end="url(#a)" />
+          <path d="M700 126 L700 240" marker-end="url(#a)" />
+          <path d="M300 240 L300 126" stroke-dasharray="5 4" marker-end="url(#a)" />
+          <path d="M110 126 L110 240" stroke-dasharray="5 4" marker-end="url(#a)" />
+        </g>
+
+        <!-- The edge the system exists for -->
+        <line x1="430" y1="275" x2="560" y2="275" fill="none" stroke="#c4382a"
+              stroke-width="2.5" marker-end="url(#a-hot)" />
+        <text x="495" y="228" font-size="12.5" font-weight="600" text-anchor="middle" fill="#c4382a">
+          the part, and “you can start”
+        </text>
+
+        <!-- Bottom row -->
+        <g fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.85">
+          <rect x="50" y="240" width="110" height="70" rx="11" />
+          <rect x="250" y="240" width="180" height="70" rx="11" />
+          <rect x="560" y="240" width="180" height="70" rx="11" />
+        </g>
+        <rect x="788" y="240" width="82" height="70" rx="11"
+              fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4" />
+
+        <g text-anchor="middle" fill="currentColor">
+          <text x="105" y="272" font-size="13" font-weight="700">Admin</text>
+          <text x="105" y="291" font-size="11" opacity="0.65">routing · BOM</text>
+
+          <text x="340" y="272" font-size="12.5" font-weight="700">Worker · sub-assembly</text>
+          <text x="340" y="291" font-size="11" opacity="0.65">builds the part</text>
+
+          <text x="650" y="272" font-size="12.5" font-weight="700">Worker · final assembly</text>
+          <text x="650" y="291" font-size="11" opacity="0.65">fits the part</text>
+
+          <text x="829" y="280" font-size="12" opacity="0.6">Unit done</text>
+        </g>
+
+        <!-- Edge labels -->
+        <g fill="currentColor" opacity="0.7" font-size="11">
+          <text x="205" y="266" text-anchor="middle">releases</text>
+          <text x="632" y="186" text-anchor="end">can’t continue</text>
+          <text x="708" y="186">unblock, cover</text>
+          <text x="292" y="176" text-anchor="end">hours, scrap, stock</text>
+          <text x="118" y="210">may raise orders too</text>
+        </g>
+
+        <text x="50" y="352" font-size="11" fill="currentColor" opacity="0.55">
+          solid = an action moves work · dashed = a record appears on someone’s screen
+        </text>
+      </svg>
+    </div>
+    <figcaption>
+      The red edge is the one the system exists for: finishing a sub-assembly both allocates
+      the physical part to the order waiting for it and tells that station it can start.
+      Everything else on the floor already had a way of happening — that one did not.
+    </figcaption>
+  </figure>
+
+  <!-- ============================ ADMIN ============================ -->
+  <section class="section">
+    <h2>Each role, in order</h2>
+    <p class="lede">
+      Numbered because these really are sequences — one thing genuinely has to happen before the
+      next. Where a step ends with a coloured bar, that is the moment it becomes somebody else's
+      problem.
+    </p>
+
+    <div class="lane" data-role="admin">
+      <div class="lane-head">
+        <h3>Admin</h3>
+        <p>Runs once per product, then rarely. Everything the other two roles do is shaped by what happens here.</p>
+      </div>
+      <ol class="flow">
+        <li>
+          <span class="n">01</span>
+          <div>
+            <div class="what">Add the parts and the product</div>
+            <div class="how">
+              Bought-in parts get an opening stock and, if wanted, a reorder point. Made-here
+              parts get their own steps. Opening stock is booked as a receipt through the ledger,
+              never written straight into a balance.
+            </div>
+            <div class="where">/admin/products</div>
+          </div>
+        </li>
+        <li>
+          <span class="n">02</span>
+          <div>
+            <div class="what">Lay out the process</div>
+            <div class="how">
+              Ordered steps, each at a station with an expected time. This is the "different
+              process for different products" requirement, and it is data — nobody ships a new
+              version because a station moved.
+            </div>
+            <div class="where">/admin/products/[id]</div>
+          </div>
+        </li>
+        <li>
+          <span class="n">03</span>
+          <div>
+            <div class="what">Say what goes into it, and where</div>
+            <div class="how">
+              Each part is tied to the step that consumes it. That placement is what keeps stock
+              numbers believable — material leaves when the step that uses it starts, not when
+              the order closes.
+            </div>
+            <div class="where">/admin/products/[id]</div>
+          </div>
+        </li>
+        <li>
+          <span class="n">04</span>
+          <div>
+            <div class="what">Raise the work order</div>
+            <div class="how">
+              One action creates every step, spawns a separate order for every made-here
+              component, and writes the dependency records that decide what may start when.
+            </div>
+            <div class="where">/admin/work-orders</div>
+            <div class="handoff">
+              <b>Admin</b><span class="arrow">→</span><b>every station in the routing</b>
+              <span>steps appear in each worker's queue</span>
+            </div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- ============================ WORKER ============================ -->
+    <div class="lane" data-role="worker">
+      <div class="lane-head">
+        <h3>Worker</h3>
+        <p>Runs many times a day, at one station, on a tablet. Sees only work they can act on.</p>
+      </div>
+      <ol class="flow">
+        <li>
+          <span class="n">01</span>
+          <div>
+            <div class="what">Look at the queue</div>
+            <div class="how">
+              Split three ways: running now, ready to start, and waiting — and every waiting card
+              says what it is waiting on, by name. Not "not your turn".
+            </div>
+            <div class="where">/my-station</div>
+          </div>
+        </li>
+        <li>
+          <span class="n">02</span>
+          <div>
+            <div class="what">Start</div>
+            <div class="how">
+              The clock starts and the step's material leaves stock, in one transaction. If the
+              material cannot be issued, nothing happens at all — the step does not end up
+              running against parts that were never drawn. Tapping again, or a colleague clocking
+              on, does not draw it twice.
+            </div>
+            <div class="handoff">
+              <b>Worker</b><span class="arrow">→</span><b>Inventory</b>
+              <span>an issue movement, visible to everyone</span>
+            </div>
+          </div>
+        </li>
+        <li>
+          <span class="n">03</span>
+          <div>
+            <div class="what">Mark done</div>
+            <div class="how">
+              Hours are recorded from the clock. Progress rolls up the sub-assembly tree weighted
+              by expected minutes, so a two-hour step counts for more than a ten-minute one.
+            </div>
+            <div class="handoff">
+              <b>Worker</b><span class="arrow">→</span><b>the next station</b>
+              <span>the step that was queued behind this one becomes startable</span>
+            </div>
+            <div class="handoff">
+              <b>Worker</b><span class="arrow">→</span><b>the order that needs the part</b>
+              <span>finishing a sub-assembly's last step allocates it to the parent and alerts that station</span>
+            </div>
+          </div>
+        </li>
+        <li>
+          <span class="n">04</span>
+          <div>
+            <div class="what">Can't continue</div>
+            <div class="how">
+              A reason from a fixed list plus their own words. Fixed lists are what make these
+              countable later; the free text is what makes them actionable now.
+            </div>
+            <div class="handoff">
+              <b>Worker</b><span class="arrow">→</span><b>Supervisor</b>
+              <span>an alert with the reason and the note, and the order goes on hold</span>
+            </div>
+          </div>
+        </li>
+        <li>
+          <span class="n">05</span>
+          <div>
+            <div class="what">Log scrap or rework</div>
+            <div class="how">Quantity against a reason code, at the step where it happened.</div>
+            <div class="handoff">
+              <b>Worker</b><span class="arrow">→</span><b>Supervisor</b>
+              <span>counts toward the scrap and rework breakdown in reports</span>
+            </div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- ============================ SUPERVISOR ============================ -->
+    <div class="lane" data-role="super">
+      <div class="lane-head">
+        <h3>Supervisor</h3>
+        <p>Runs a few times a day. Almost everything they do starts from something a worker did.</p>
+      </div>
+      <ol class="flow">
+        <li>
+          <span class="n">01</span>
+          <div>
+            <div class="what">Check what is held up</div>
+            <div class="how">
+              Every step that cannot start, and the thing holding it — a sub-assembly that has not
+              delivered, stock that is short, a quality hold. Steps merely queued behind their own
+              predecessor are counted separately, so the handful that are genuinely stuck are not
+              buried under the ones that are simply waiting their turn.
+            </div>
+            <div class="where">/waiting</div>
+          </div>
+        </li>
+        <li>
+          <span class="n">02</span>
+          <div>
+            <div class="what">Work the alerts</div>
+            <div class="how">
+              Blocked steps arrive as they happen. Shortages, overruns and reorder points are
+              worked out fresh each visit, so they clear themselves when the cause is fixed rather
+              than sitting there once resolved.
+            </div>
+            <div class="where">/alerts</div>
+          </div>
+        </li>
+        <li>
+          <span class="n">03</span>
+          <div>
+            <div class="what">Unblock, or cover the station</div>
+            <div class="how">
+              A supervisor may start, complete, block or unblock at any station — that is how
+              absences get covered and jams get cleared.
+            </div>
+            <div class="handoff">
+              <b>Supervisor</b><span class="arrow">→</span><b>Worker</b>
+              <span>the step returns to their queue and the alert closes itself</span>
+            </div>
+          </div>
+        </li>
+        <li>
+          <span class="n">04</span>
+          <div>
+            <div class="what">Correct a time entry</div>
+            <div class="how">
+              The original is never overwritten. A correction is a new record carrying who changed
+              it, from what, to what, and why — which is exactly why a worker cannot make one.
+            </div>
+            <div class="where">/timesheets</div>
+            <div class="handoff">
+              <b>Supervisor</b><span class="arrow">→</span><b>Worker</b>
+              <span>visible on the worker's own timesheet, with the supervisor's name on it</span>
+            </div>
+          </div>
+        </li>
+        <li>
+          <span class="n">05</span>
+          <div>
+            <div class="what">Read the numbers</div>
+            <div class="how">
+              Average time per step, per station and per worker against estimate, and a scrap and
+              rework breakdown. All of it computed from the clock — nobody types a figure in.
+            </div>
+            <div class="where">/reports</div>
+          </div>
+        </li>
+        <li>
+          <span class="n">06</span>
+          <div>
+            <div class="what">Raise the next order</div>
+            <div class="how">
+              A supervisor can raise work orders without an admin. They cannot change what a
+              product is made of or how it is built.
+            </div>
+            <div class="where">/admin/work-orders</div>
+            <div class="handoff">
+              <b>Supervisor</b><span class="arrow">→</span><b>every station</b>
+              <span>a fresh set of steps, exactly as when an admin raises one</span>
+            </div>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============================ THE CONNECTIONS ============================ -->
+  <section class="section">
+    <h2>Every connection, and how it travels</h2>
+    <p class="lede">
+      Three mechanisms carry work between people, and the difference matters. A <b>queue</b> entry
+      waits to be looked at. A <b>stored</b> alert is a fact about a moment that someone can mark
+      dealt with. A <b>derived</b> alert is simply true right now and disappears by itself when the
+      cause is fixed — which is why it cannot be dismissed.
+    </p>
+
+    <div class="tablebox">
+      <table>
+        <thead>
+          <tr>
+            <th>From → to</th>
+            <th>When</th>
+            <th>How it travels</th>
+            <th>Where it lands</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="pair">Admin <span class="to">→ stations</span></td>
+            <td>An order is released</td>
+            <td><span class="tag queue">Queue</span></td>
+            <td>Each station's own step list</td>
+          </tr>
+          <tr>
+            <td class="pair">Worker <span class="to">→ next step</span></td>
+            <td>A step is marked done</td>
+            <td><span class="tag queue">Queue</span> <span class="tag stored">Alert</span></td>
+            <td>The next step becomes startable; if nothing else is in its way, that station is told</td>
+          </tr>
+          <tr>
+            <td class="pair">Worker <span class="to">→ the waiting order</span></td>
+            <td>The last step of a sub-assembly is done</td>
+            <td><span class="tag stored">Alert</span></td>
+            <td>The part is allocated to the parent's requirement, and final assembly gets “ready to start”</td>
+          </tr>
+          <tr>
+            <td class="pair">Worker <span class="to">→ Supervisor</span></td>
+            <td>Can't continue</td>
+            <td><span class="tag stored">Alert</span></td>
+            <td>Supervisor's alerts and the overview; the order goes on hold</td>
+          </tr>
+          <tr>
+            <td class="pair">Worker <span class="to">→ Supervisor</span></td>
+            <td>Start and mark done</td>
+            <td><span class="tag derived">Derived</span></td>
+            <td>Timesheets, and the averages in reports</td>
+          </tr>
+          <tr>
+            <td class="pair">Worker <span class="to">→ everyone</span></td>
+            <td>Starting a step draws its material</td>
+            <td><span class="tag derived">Derived</span></td>
+            <td>Inventory on hand, and a shortage alert if it takes something below what is needed</td>
+          </tr>
+          <tr>
+            <td class="pair">Supervisor <span class="to">→ Worker</span></td>
+            <td>Unblock</td>
+            <td><span class="tag queue">Queue</span></td>
+            <td>Back in the queue; the blocked alert closes itself</td>
+          </tr>
+          <tr>
+            <td class="pair">Supervisor <span class="to">→ Worker</span></td>
+            <td>Acts at another station</td>
+            <td><span class="tag queue">Queue</span></td>
+            <td>That station's card shows the step already running</td>
+          </tr>
+          <tr>
+            <td class="pair">Supervisor <span class="to">→ Worker</span></td>
+            <td>Corrects a time entry</td>
+            <td><span class="tag stored">Record</span></td>
+            <td>The worker's timesheet, with who changed it and why</td>
+          </tr>
+          <tr>
+            <td class="pair">Stock <span class="to">→ Supervisor</span></td>
+            <td>Free stock reaches a reorder point</td>
+            <td><span class="tag derived">Derived</span></td>
+            <td>Alerts and the inventory screen</td>
+          </tr>
+          <tr>
+            <td class="pair">The clock <span class="to">→ Supervisor</span></td>
+            <td>A step passes twice its estimate</td>
+            <td><span class="tag derived">Derived</span></td>
+            <td>Alerts, until the step is finished or paused</td>
+          </tr>
+          <tr>
+            <td class="pair">Supervisor <span class="to">→ Admin</span></td>
+            <td>Needs a new product, station, person or reason code</td>
+            <td><span class="tag none">No path</span></td>
+            <td>Nothing in the system carries this — it is a conversation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================ GAPS ============================ -->
+  <section class="section">
+    <h2>Handoffs that do not exist yet</h2>
+    <p class="lede">
+      Worth naming, because a diagram of what connects is only honest alongside what doesn't.
+    </p>
+
+    <div class="notecards">
+      <div class="note">
+        <div class="n2">Nothing leaves the building</div>
+        <p>
+          Every connection above lands on a screen inside the app. No email, no text, no display
+          on the wall — so a supervisor who has gone home, or a worker not holding a tablet, is
+          told nothing until they next open it.
+        </p>
+      </div>
+      <div class="note">
+        <div class="n2">Nobody can ask the admin for anything</div>
+        <p>
+          A supervisor who needs a new reason code or a new station has no way to request it.
+          The only path is to go and find the person.
+        </p>
+      </div>
+      <div class="note">
+        <div class="n2">Quality never reaches anyone</div>
+        <p>
+          Inspection, holds and rework decisions exist in the engine and no screen calls them,
+          so a failed part cannot be held from the app — and a hold is one of the three things
+          that can stop a parent order.
+        </p>
+      </div>
+      <div class="note">
+        <div class="n2">An admin's edit reaches live orders</div>
+        <p>
+          Changing a routing or a bill of materials affects orders already on the floor. A
+          released order should carry a frozen copy; that is specified and not built.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    The stations, routings and assembly sequence in the demonstration data are a best guess from
+    Thermal Corporation's public Air Handlers catalogue, not their confirmed process. The
+    handoffs above are real and were exercised end to end; the factory they describe has not been
+    validated.
+  </footer>
+
+</div>

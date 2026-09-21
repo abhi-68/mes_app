@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+/*
+  Thermal Corp MES — design tokens.
+
+  Grounded in Thermal Corporation's own printed identity: the deep navy wordmark and
+  the chartreuse banner used across their Air Handlers catalog. Surfaces are steel
+  greys rather than warm neutrals, because the subject is galvanized sheet metal.
+
+  Typeface is IBM Plex — drawn for technical products, and self-hosted through
+  @fontsource so there is no build-time or runtime call to a font CDN. Plex Mono
+  carries every number that has to line up in a column: order numbers, quantities,
+  durations, percentages.
+
+  Status colour is never carried by hue alone — every status also carries a distinct
+  label and, where it matters, a dot, so it survives a glance from across a shop
+  floor and works for colour-blind users.
+*/
+
+:root {
+  /* Brand */
+  --navy-950: #071829;
+  --navy-900: #0d2440;
+  --navy-800: #16365c;
+  --navy-700: #1f4a7a;
+  --navy-600: #2d6199;
+  --chartreuse: #c2d62e;
+  --chartreuse-dim: #a8ba22;
+
+  /* Steel neutrals */
+  --steel-50: #f7f8fa;
+  --steel-100: #eef0f4;
+  --steel-200: #e0e3ea;
+  --steel-300: #c6ccd7;
+  --steel-400: #949bab;
+  --steel-500: #697183;
+  --steel-600: #4c5364;
+  --steel-700: #353b48;
+  --steel-900: #191d25;
+
+  /* Status */
+  --ok-bg: #e4f4ea;
+  --ok-fg: #12703f;
+  --ok-solid: #1a8a4f;
+
+  --active-bg: #fdf2dd;
+  --active-fg: #8a5a09;
+  --active-solid: #d4900f;
+
+  --blocked-bg: #fde9e7;
+  --blocked-fg: #9c2a1c;
+  --blocked-solid: #c4382a;
+
+  --idle-bg: #eef0f4;
+  --idle-fg: #5b6274;
+  --idle-solid: #aeb4c0;
+
+  /*
+    Ownership. Deliberately NOT one of the status colours above: "this one is
+    yours" is orthogonal to whether the step is ready, running or blocked, and a
+    worker needs to read both off the same card at once. Navy is the only family
+    no status uses, so it can carry ownership without ever being mistaken for one.
+  */
+  --mine-bg: #e7eef7;
+  --mine-fg: #16365c;
+  --mine-solid: #2d6199;
+
+  --background: #ffffff;
+  --foreground: var(--steel-900);
+
+  /*
+    Elevation. Two levels only — a resting surface and one that has been lifted,
+    such as a card under the cursor or a menu. Everything else is a border.
+    Shadows are tinted navy rather than black; grey-on-grey shadows read as dirt.
+  */
+  --shadow-sm: 0 1px 2px 0 rgb(13 36 64 / 0.04), 0 1px 3px 0 rgb(13 36 64 / 0.06);
+  --shadow-md:
+    0 2px 4px -1px rgb(13 36 64 / 0.06), 0 8px 16px -4px rgb(13 36 64 / 0.08);
+  --shadow-lg:
+    0 4px 8px -2px rgb(13 36 64 / 0.08), 0 20px 32px -8px rgb(13 36 64 / 0.12);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-navy-950: var(--navy-950);
+  --color-navy-900: var(--navy-900);
+  --color-navy-800: var(--navy-800);
+  --color-navy-700: var(--navy-700);
+  --color-navy-600: var(--navy-600);
+  --color-chartreuse: var(--chartreuse);
+  --color-chartreuse-dim: var(--chartreuse-dim);
+
+  --color-steel-50: var(--steel-50);
+  --color-steel-100: var(--steel-100);
+  --color-steel-200: var(--steel-200);
+  --color-steel-300: var(--steel-300);
+  --color-steel-400: var(--steel-400);
+  --color-steel-500: var(--steel-500);
+  --color-steel-600: var(--steel-600);
+  --color-steel-700: var(--steel-700);
+  --color-steel-900: var(--steel-900);
+
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-fg: var(--ok-fg);
+  --color-ok-solid: var(--ok-solid);
+  --color-active-bg: var(--active-bg);
+  --color-active-fg: var(--active-fg);
+  --color-active-solid: var(--active-solid);
+  --color-blocked-bg: var(--blocked-bg);
+  --color-blocked-fg: var(--blocked-fg);
+  --color-blocked-solid: var(--blocked-solid);
+  --color-idle-bg: var(--idle-bg);
+  --color-idle-fg: var(--idle-fg);
+  --color-idle-solid: var(--idle-solid);
+  --color-mine-bg: var(--mine-bg);
+  --color-mine-fg: var(--mine-fg);
+  --color-mine-solid: var(--mine-solid);
+
+  --shadow-card: var(--shadow-sm);
+  --shadow-raised: var(--shadow-md);
+  --shadow-float: var(--shadow-lg);
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo,
+    Consolas, monospace;
+}
+
+body {
+  background: var(--steel-50);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/*
+  Headings are set tight. Plex Sans is drawn a little wide, and default tracking at
+  display sizes leaves headings looking loose beside dense tables.
+*/
+h1,
+h2,
+h3 {
+  letter-spacing: -0.018em;
+}
+
+/* Anything that has to line up in a column: order numbers, counts, durations. */
+.tnum {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* A small capitalised label above a value or a section. */
+.eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--steel-400);
+}
+
+/* The brand rule — a chartreuse bar, as on their printed covers. */
+.brand-rule {
+  background: linear-gradient(180deg, var(--chartreuse) 0%, var(--chartreuse-dim) 100%);
+}
+
+/* Visible keyboard focus everywhere — shop tablets and office keyboards both. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--navy-600);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

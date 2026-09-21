@@ -1,0 +1,1285 @@
+<title>Inside Epicor Kinetic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+>
+
+<style>
+  /*
+    A reference page, so the job is density without fatigue: one type scale, a
+    three-value encoding for licensing that repeats often enough to earn a legend,
+    and a neutral with a slight blue bias so the accent never looks pasted on.
+  */
+  :root {
+    --ground: #f1f3f6;
+    --surface: #ffffff;
+    --surface-2: #f8f9fb;
+    --line: #dee2e9;
+    --line-soft: #e9ecf1;
+
+    --ink: #14181f;
+    --ink-2: #454c5a;
+    --ink-3: #6a7180;
+    --ink-4: #949bab;
+
+    --accent: #1f4a7a;
+    --accent-soft: #e7eef6;
+
+    --base: #12703f;
+    --base-bg: #e4f4ea;
+    --addon: #8a5a09;
+    --addon-bg: #fbf0da;
+    --oem: #7a2e86;
+    --oem-bg: #f5e8f7;
+    --warn: #9c2a1c;
+    --warn-bg: #fbe9e7;
+
+    --shadow: 0 1px 2px rgb(20 30 50 / .05), 0 1px 3px rgb(20 30 50 / .05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0a1017;
+      --surface: #131a23;
+      --surface-2: #0f161e;
+      --line: #262f3b;
+      --line-soft: #1e2630;
+      --ink: #e9edf3;
+      --ink-2: #b4bdc9;
+      --ink-3: #8b94a3;
+      --ink-4: #6a7382;
+      --accent: #7fb0e0;
+      --accent-soft: #14273a;
+      --base: #5fc98c;
+      --base-bg: #122a1c;
+      --addon: #e0aa45;
+      --addon-bg: #2b2009;
+      --oem: #d49ae0;
+      --oem-bg: #2a1430;
+      --warn: #e8897c;
+      --warn-bg: #2d1512;
+      --shadow: 0 1px 2px rgb(0 0 0 / .45);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0a1017;
+    --surface: #131a23;
+    --surface-2: #0f161e;
+    --line: #262f3b;
+    --line-soft: #1e2630;
+    --ink: #e9edf3;
+    --ink-2: #b4bdc9;
+    --ink-3: #8b94a3;
+    --ink-4: #6a7382;
+    --accent: #7fb0e0;
+    --accent-soft: #14273a;
+    --base: #5fc98c;
+    --base-bg: #122a1c;
+    --addon: #e0aa45;
+    --addon-bg: #2b2009;
+    --oem: #d49ae0;
+    --oem-bg: #2a1430;
+    --warn: #e8897c;
+    --warn-bg: #2d1512;
+    --shadow: 0 1px 2px rgb(0 0 0 / .45);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+      Roboto, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 960px;
+    margin-inline: auto;
+    padding-inline: 20px;
+    padding-block: 40px 80px;
+  }
+
+  h1, h2, h3, h4 { margin: 0; letter-spacing: -.018em; text-wrap: balance; }
+  a { color: var(--accent); }
+
+  .eyebrow {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead { border-bottom: 1px solid var(--line); padding-bottom: 28px; }
+  .masthead h1 {
+    margin-top: 6px;
+    font-size: clamp(1.8rem, 5vw, 2.5rem);
+    line-height: 1.1;
+    font-weight: 700;
+  }
+  .masthead .sub { margin: 12px 0 0; max-width: 66ch; color: var(--ink-3); }
+
+  /* ---------- the three facts ---------- */
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-top: 28px;
+  }
+  .fact {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .fact h3 { font-size: 14px; font-weight: 700; }
+  .fact p { margin: 7px 0 0; font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+
+  /* ---------- contents ---------- */
+  .toc {
+    margin-top: 30px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .toc p { margin: 0 0 9px; }
+  .toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 13.5px;
+  }
+  .toc a { text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* ---------- legend ---------- */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 18px;
+    font-size: 12.5px;
+    color: var(--ink-3);
+    align-items: center;
+  }
+
+  .tag {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tag.base { background: var(--base-bg); color: var(--base); }
+  .tag.addon { background: var(--addon-bg); color: var(--addon); }
+  .tag.oem { background: var(--oem-bg); color: var(--oem); }
+  .tag.unk { background: var(--surface-2); color: var(--ink-4); }
+
+  /* ---------- sections ---------- */
+  section.mod { margin-top: 54px; scroll-margin-top: 16px; }
+  section.mod > h2 {
+    font-size: clamp(1.25rem, 3vw, 1.5rem);
+    font-weight: 700;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--line);
+  }
+  section.mod > .intro {
+    margin: 12px 0 0;
+    max-width: 72ch;
+    color: var(--ink-3);
+    font-size: 14px;
+  }
+
+  .items { margin-top: 18px; display: grid; gap: 12px; }
+  .item {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 14px 17px;
+    box-shadow: var(--shadow);
+  }
+  .item .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 9px;
+    margin-bottom: 6px;
+  }
+  .item h4 { font-size: 14.5px; font-weight: 600; }
+  .item p { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+  .item p + p { margin-top: 7px; }
+  .item .caveat {
+    margin-top: 8px;
+    padding: 7px 10px;
+    background: var(--warn-bg);
+    border-radius: 7px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+  }
+  .item .caveat b { color: var(--warn); }
+
+  /* ---------- provenance table ---------- */
+  .tablebox {
+    margin-top: 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  table { width: 100%; min-width: 560px; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 11px 16px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 11px 16px;
+    font-size: 13.5px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--ink-2);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.name { font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+  /* ---------- gotchas ---------- */
+  .gotcha {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--warn);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .gotcha h4 { font-size: 14px; font-weight: 600; }
+  .gotcha p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+
+  /* ---------- dates ---------- */
+  .timeline { margin-top: 18px; display: grid; gap: 10px; }
+  .tl {
+    display: grid;
+    grid-template-columns: 116px 1fr;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 16px;
+    align-items: baseline;
+  }
+  .tl .when {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .tl .what { font-size: 13.5px; color: var(--ink-2); }
+  .tl .what b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 520px) {
+    .tl { grid-template-columns: 1fr; gap: 4px; }
+  }
+
+  /* ---------- closing ---------- */
+  .closing {
+    margin-top: 54px;
+    background: var(--accent-soft);
+    border-radius: 14px;
+    padding: 22px 24px;
+  }
+  .closing h2 { font-size: 1.25rem; font-weight: 700; }
+  .closing p { margin: 11px 0 0; font-size: 14px; color: var(--ink-2); max-width: 70ch; line-height: 1.6; }
+
+  footer {
+    margin-top: 44px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-4);
+  }
+  footer a { color: var(--ink-3); }
+  footer .srcs { margin-top: 8px; line-height: 1.9; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Reference · September 2026</p>
+    <h1>Inside Epicor Kinetic</h1>
+    <p class="sub">
+      Every module in the suite, what it actually does mechanically, and whether it is
+      Epicor's own code or something they bought. Epicor's own pages are almost entirely
+      marketing, so most of the mechanism here comes from partner documentation and from
+      epiusers.help, where the people running it describe what it really does.
+    </p>
+  </header>
+
+  <div class="facts">
+    <div class="fact">
+      <h3>It is an ERP, not an MES</h3>
+      <p>
+        Manufacturing execution is one department of a suite that also runs your ledger,
+        your payroll, your webshop and your field engineers. Comparing it to a shop-floor
+        tool compares the wrong things.
+      </p>
+    </div>
+    <div class="fact">
+      <h3>“MES” means two unrelated products</h3>
+      <p>
+        Standard MES is a terminal that records what people type. Advanced MES is a
+        separate acquired product (Mattec) with its own hardware that records what machines
+        do. They share a name and almost nothing else.
+      </p>
+    </div>
+    <div class="fact">
+      <h3>Much of the suite was bought, not built</h3>
+      <p>
+        CPQ, FP&amp;A, field service, tax, document management, BI, EDI and the webstore are
+        all acquisitions or OEM deals. That shows up as seams: overlapping products, no
+        published guidance on which to use.
+      </p>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <p class="eyebrow">On this page</p>
+    <ol>
+      <li><a href="#provenance">What was bought</a></li>
+      <li><a href="#manufacturing">Manufacturing</a></li>
+      <li><a href="#supply">Supply chain</a></li>
+      <li><a href="#sales">Sales &amp; commerce</a></li>
+      <li><a href="#finance">Finance &amp; projects</a></li>
+      <li><a href="#service">Service &amp; people</a></li>
+      <li><a href="#platform">Platform &amp; data</a></li>
+      <li><a href="#gotchas">How it behaves in practice</a></li>
+      <li><a href="#dates">Dates that matter</a></li>
+    </ol>
+    <div class="legend">
+      <span class="tag base">Base</span> included in core Kinetic
+      <span class="tag addon">Add-on</span> separately licensed
+      <span class="tag oem">Acquired / OEM</span> not Epicor-written code
+      <span class="tag unk">Unstated</span> Epicor does not say
+    </div>
+  </nav>
+
+  <!-- ===================== PROVENANCE ===================== -->
+  <section class="mod" id="provenance">
+    <h2>What Epicor bought rather than built</h2>
+    <p class="intro">
+      Worth reading first, because it explains most of the suite's inconsistencies. A module
+      with a different interaction model, a separate admin portal or its own scripting
+      language is usually an acquisition wearing an Epicor badge.
+    </p>
+
+    <div class="tablebox">
+      <table>
+        <thead>
+          <tr><th>Product</th><th>Actually</th><th>Since</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">Advanced MES</td><td>Mattec — machine-monitoring MES with its own hardware line</td><td>acquired</td></tr>
+          <tr><td class="name">Epicor CPQ</td><td>KBMax — own codebase, own “Snap” visual language, own help portal</td><td>May 2021</td></tr>
+          <tr><td class="name">Epicor FP&amp;A</td><td>DSPanel “Performance Canvas”, rebranded</td><td>Mar 2023</td></tr>
+          <tr><td class="name">Field Service Management</td><td>Evron — and it overlaps Kinetic's own built-in Field Service module</td><td>acquired</td></tr>
+          <tr><td class="name">Epicor Tax Connect</td><td>Avalara AvaTax under an Epicor badge</td><td>ISV partner</td></tr>
+          <tr><td class="name">Epicor ECM</td><td>docSTAR — and with it Sales Order Automation</td><td>2017</td></tr>
+          <tr><td class="name">Epicor Commerce</td><td>Adobe Magento with an Epicor integration layer</td><td>OEM</td></tr>
+          <tr><td class="name">Epicor Data Analytics</td><td>Phocas — Epicor says so on its own page</td><td>OEM</td></tr>
+          <tr><td class="name">Epicor Grow BI</td><td>Grow Inc. — owned outright, not OEM'd</td><td>Mar 2022</td></tr>
+          <tr><td class="name">Automation Studio</td><td>Workato iPaaS, white-labelled</td><td>OEM</td></tr>
+          <tr><td class="name">Integration Cloud</td><td>Jitterbit iPaaS — a <em>second</em> integration platform</td><td>OEM</td></tr>
+          <tr><td class="name">Kinetic Warehouse</td><td>Built by Biscit, an Australian ISV — check the Play Store listing</td><td>partner</td></tr>
+          <tr><td class="name">Epicor QMS</td><td>ETQ, part of Hexagon — syncs with Kinetic rather than living in it</td><td>OEM</td></tr>
+          <tr><td class="name">EDI</td><td>1 EDI Source, Data Interchange and Data Masons, all acquired</td><td>2019 →</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================== MANUFACTURING ===================== -->
+  <section class="mod" id="manufacturing">
+    <h2>Manufacturing</h2>
+    <p class="intro">
+      The part that matters most, and where the documentation is deepest. Everything hangs
+      off one hierarchy: <b>job → assembly → operation → material</b>. Labour, scrap,
+      costing, scheduling and the work queue are all projections of “employee + operation +
+      quantity”.
+    </p>
+
+    <div class="items">
+      <div class="item">
+        <div class="head"><h4>Job Management</h4><span class="tag base">Base</span></div>
+        <p>
+          A job is a header with assemblies beneath it, each carrying its own operations and
+          materials. “Get Details” copies the part's <b>Method of Manufacture</b> — the BOM
+          plus the bill of operations — onto the job as an editable snapshot, so a job can
+          diverge from the engineering master without changing it. Jobs move Engineered →
+          Released → Completed → Closed; only a released job reaches the shop floor.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Demand links (make-to-order vs make-to-stock)</h4><span class="tag base">Base</span></div>
+        <p>
+          The link between a job and a sales order lives in a separate record, not on either
+          one — created from the order via the Order Job Wizard, or from the job as a demand
+          link. A job with no link is make-to-stock and receives into a warehouse; a linked
+          job's output goes to the shipment. One job can serve several deliveries.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Job costing</h4><span class="tag base">Base</span></div>
+        <p>
+          Four buckets — material, material burden, subcontract, and labour plus burden —
+          each held as estimate and actual side by side. Estimates come from the resource's
+          rates applied to the operation's estimated hours; actuals come from MES labour
+          transactions and material issues. Costs sit in work-in-progress until a capture
+          process posts them, and closing the job computes the variance.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> roll up standard costs after a job exists and the job's
+          estimates do not recalculate, so you get phantom variance that has nothing to do
+          with the shop floor.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>MES terminal — the shop-floor screen</h4><span class="tag base">Base</span></div>
+        <p>
+          Packaged as the Data Collection module. A terminal usually runs under one generic
+          account and workers identify themselves with an employee ID, so time is attributed
+          to the person, not the login. Clock-in and clock-out bracket the shift with
+          configurable grace periods, separately from job activity.
+        </p>
+        <p>
+          The worker picks job, assembly and operation, then starts <b>setup</b> or
+          <b>production</b> — tracked as separate cost elements. Each start/end pair writes a
+          labour detail record. On ending, they report quantity completed, scrap quantity and
+          reason, and can flag the operation finished.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Concurrent activities</h4><span class="tag base">Base</span></div>
+        <p>
+          A worker can have several activities open at once and the system splits their hours
+          across the jobs proportionally. This is how one operator minding four machines gets
+          costed correctly instead of four times their clock time — a non-obvious requirement
+          that most simple systems get wrong.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Work Queue</h4><span class="tag base">Base</span></div>
+        <p>
+          A prioritised list of operations at the terminal, filtered to current, available or
+          expected work. Mechanically it is a projection of the <em>schedule</em>, so it is
+          only as sensible as your scheduling data.
+        </p>
+        <div class="caveat">
+          <b>The gap:</b> the Work Queue exists only inside the shop-floor console.
+          Supervisors cannot assign work to people from the main application — there is an
+          open enhancement request for it, and sites routinely build their own tooling. The
+          material side has a queue manager; the labour side does not.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Material Queue and Shop Tracker</h4><span class="tag base">Base</span></div>
+        <p>
+          The Material Queue is the handler's counterpart to the Work Queue: move requests to
+          stage material at a work centre, picked off and confirmed. Shop Tracker is the
+          supervisor's view of who is clocked in and what each work centre is running.
+          Job, order, customer and shipment trackers are read-only drill-downs so a
+          shop-floor user can answer “where is this order” without an ERP seat.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Non-conformance and DMR</h4><span class="tag base">Base</span></div>
+        <p>
+          A non-conformance raised from the floor moves parts out of work-in-progress into
+          Inspection Processing, which has separate paths for manufactured parts after an
+          operation and purchased material at receipt. Failing inspection issues a DMR number
+          and routes the material into a disposition process. Scrap and non-conformance are
+          deliberately different things: one is waste, the other is a decision still to be made.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> the non-conformance number is not shown in the interface. You
+          find it in the reference column of part transaction history.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Advanced MES</h4><span class="tag oem">Acquired</span></div>
+        <p>
+          A different product, not a tier. Standard MES is a transaction engine that records
+          what a person types. Advanced MES listens to the equipment: a purpose-built
+          interface unit wires into machine signals — including non-OPC PLCs — with onboard
+          caching so counts survive a network outage, and counts every cycle without a human
+          tally.
+        </p>
+        <p>
+          Downtime is detected from the machine signal and the operator is then made to
+          classify it, so the stop is recorded whether or not anyone reacts; it catches
+          micro-stops nobody would ever log. Because runtime, downtime, cycle time and scrap
+          are all machine-captured, OEE is computed rather than self-reported. Adds its own
+          scheduler that updates from observed machine speeds, statistical process control on
+          streaming process variables, meter-based preventive maintenance and energy monitoring.
+        </p>
+        <div class="caveat">
+          <b>Worth knowing:</b> Epicor publishes no explanation of how Advanced MES integrates
+          with Kinetic, and it brings a second scheduler that overlaps the ERP's own. Roots
+          are in plastics, rubber, automotive and metals.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Scheduling — the capacity model</h4><span class="tag base">Base</span> <span class="tag addon">APS adds</span></div>
+        <p>
+          Work centres are <b>resource groups</b> containing individual <b>resources</b>. An
+          operation points at a specific resource, a group, or — with Advanced Planning and
+          Scheduling — a <b>capability</b>, a named skill held by several resources, so the
+          scheduler picks whichever qualifying one is free. Each resource carries its own
+          calendar.
+        </p>
+        <p>
+          Capacity is finite or infinite per resource. APS adds start-to-start,
+          finish-to-finish and send-ahead relationships between operations, lets one operation
+          span several resources at once, treats material availability as a constraint
+          alongside capacity, and provides Gantt boards for a single job, for multiple
+          resources, and a what-if mode.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> the finite flag must be set in two places, and the finite
+          horizon is a window in days — beyond it the system silently goes back to scheduling
+          infinitely. Scheduling type is sticky: switching a site between finite and infinite
+          means pulling every job off the schedule first.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Quality — three different things</h4><span class="tag base">Base</span> <span class="tag oem">QMS acquired</span></div>
+        <p>
+          <b>Quality Assurance</b> (base) is inspection processing, non-conformance, DMR and
+          material review. <b>Enhanced Quality Assurance</b> adds revision-controlled
+          inspection plans with defined attributes and pass/fail values, configurable sample
+          sizes, skip-lot processing that lets good suppliers bypass inspection, and
+          calibration plans — though its control charts are built by querying the data out,
+          not by a built-in chart engine. <b>Epicor QMS</b> is a separate cloud product from
+          ETQ covering CAPA, audits, document control, training records and supplier quality.
+        </p>
+        <div class="caveat">
+          <b>Thin spot:</b> independent analysis rates non-conformance and corrective action
+          as Kinetic's weakest area, and certificates of conformance are not described as a
+          named feature anywhere. Corrective actions are normally chained to a DMR; raising a
+          standalone one is awkward.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Engineering — methods and change control</h4><span class="tag base">Base</span> <span class="tag addon">PLM add-on</span></div>
+        <p>
+          The Engineering Workbench is where a revision is checked out, modified, approved and
+          checked back in — the check-out is what stops two engineers editing the same
+          revision. BOM and routing together form the Method of Manufacture, edited as an
+          indented tree, with multiple and alternate revisions per part. Jobs created after an
+          approval pick up the new method; jobs already running keep their snapshot.
+        </p>
+        <p>
+          CADLink pushes BOM revisions forward from mechanical and electrical CAD. Real
+          product lifecycle management is a bolt-on third-party system (PRO.FILE); Kinetic
+          itself is product <em>data</em> management. A costing workbench runs rollups through
+          the method with variance analysis before you commit a new standard cost.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Advanced Production, Lean and Kanban</h4><span class="tag base">Base</span> <span class="tag addon">Nesting add-on</span></div>
+        <p>
+          Advanced Production adds batching — grouping parts or operations from different jobs
+          into one physical run, which is what ovens, plating and heat treat need — plus
+          co-products from a single operation and automated nesting for sheet and plate.
+          Kanban supports pull-based manufacturing without work orders, triggered by
+          part-plant minimum thresholds.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> the kanban signal is edge-triggered. Stock that is
+          <em>already</em> below the threshold never fires — it has to be above and then fall
+          below — so sites starting from depleted stock see nothing happen at all.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SUPPLY CHAIN ===================== -->
+  <section class="mod" id="supply">
+    <h2>Supply chain</h2>
+    <p class="intro">
+      Inventory is held per part, site, warehouse and bin. Almost everything else in this
+      family is a workflow over those balances.
+    </p>
+
+    <div class="items">
+      <div class="item">
+        <div class="head"><h4>Inventory and costing</h4><span class="tag base">Base</span></div>
+        <p>
+          A part is defined once at company level and again per site; the cost method on the
+          part record is only a template for new sites, and transactions always use the site's
+          own method. Evidenced methods are standard, average, last, FIFO, lot average and lot
+          FIFO — you cannot change the method while stock exists. Separate inventory,
+          purchasing and sales units of measure with conversion factors; an advanced option
+          lets a part transact in two units at once, such as feet and pounds.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Lot and serial tracking</h4><span class="tag base">Base</span></div>
+        <p>
+          A checkbox per part; once on, a lot must be supplied at receipt, at job issue and at
+          shipment, with attributes like heat number and expiry. Serial tracking ranges from
+          none to every recorded move, with serials selected at operation completion, again at
+          receipt to stock, and again on each subsequent transaction type you configure.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> genuine multi-level traceability needs lot tracking ticked on
+          every subassembly and raw material, not just the finished good — and the lot tracker
+          often surfaces only the first level, so full trace usually needs a custom query.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Cycle counting</h4><span class="tag base">Base</span></div>
+        <p>
+          A four-level structure: a <b>period</b> is a date range, a <b>schedule</b> is one
+          warehouse's instance of it, <b>cycles</b> are the individual counting days generated
+          from the warehouse calendar, and parts are selected into cycles by ABC code, which
+          Epicor can assign automatically from movement and value. The rule that catches
+          people: the period must be no longer than the A-code frequency, or A parts get
+          counted twice or missed.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Advanced Material Management</h4><span class="tag addon">Add-on</span></div>
+        <p>
+          Licensing it forces an input warehouse and bin onto every resource and resource
+          group, and makes the system auto-create move requests at events — a purchase receipt,
+          a non-conformance, a quantity completed at an operation. Handlers work a request
+          queue; supervisors get a separate manager view showing everything including claimed
+          and stuck requests.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> selecting a request — or double-clicking it by accident — moves
+          it into that handler's personal list, where it disappears from everyone else's view.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Purchasing and approvals</h4><span class="tag base">Base</span> <span class="tag addon">ARM add-on</span></div>
+        <p>
+          Requisitions are entered and routed through configurable actions, with approvals that
+          are push-forward only — an approver forwards, a later one cannot pull. The final
+          action must be flagged “send to purchasing”, and the lines land in PO suggestions for
+          a buyer to accept or reject.
+        </p>
+        <p>
+          Purchase order approval runs off buyer records rather than a workflow engine: each
+          buyer has one limit and one approver, and tiers are built by chaining approvers.
+          Advanced Requisition Management adds catalogue-driven entry, approval trees by
+          account, part class and location, punch-out to supplier websites, and real-time
+          budget checking.
+        </p>
+        <div class="caveat">
+          <b>Two traps:</b> a zero limit means <em>no</em> limit, so set it to $1 to force
+          approval on everything. And approval is granted for a specific amount — raise the
+          order by a dollar and it needs approving again.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>MRP</h4><span class="tag base">Base</span></div>
+        <p>
+          A regenerative run purges all unfirm jobs and suggestions and reprocesses every
+          planned part level by level down the BOM; a net-change run only touches parts whose
+          demand or parameters changed. Output is unfirm jobs, new and change purchase-order
+          suggestions, and transfer suggestions. Typical pattern is regenerate at the weekend,
+          net change on weekdays.
+        </p>
+        <p>
+          The clearest mechanic: <b>minimum on-hand</b> is the reorder point and breaching it
+          creates a normal suggestion; <b>safety stock</b> is an emergency buffer beneath it
+          and breaching that schedules the replenishment for today regardless of what is
+          already in flight. MRP treats the two added together as the target level.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Forecasting and the master production schedule</h4><span class="tag base">Base</span> <span class="tag addon">Smart IO add-on</span></div>
+        <p>
+          Forecasts are entered or imported per part and date, and any sales order falling
+          inside a configured window around that date consumes the open forecast — there is no
+          one-to-one matching between a specific order and a specific forecast. Master
+          production schedule entries drive job creation, and once those jobs are firmed they
+          override the schedule so MRP does not create a second set.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> an order that misses its ship date stays open and, as the window
+          rolls forward, keeps consuming later weeks' forecast — quietly inflating planned
+          demand. Statistical forecasting is a separate cloud product, not base Kinetic.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Shipping, freight and customs</h4><span class="tag base">Base</span> <span class="tag addon">Quick Ship add-on</span></div>
+        <p>
+          Shipment entry produces a pack slip which can auto-generate the receivables invoice;
+          master packs group several pack slips into one physical shipment. Advance ship
+          notices are the EDI 856 generated at shipment confirmation. Quick Ship is the
+          multi-carrier add-on: real-time rate shopping across a hundred-plus carriers, label
+          and manifest generation, hazmat paperwork and customs filing.
+        </p>
+        <p>
+          Container tracking and landed cost is separately licensed — you record freight, duty
+          and brokerage against a container and apportion it across lines by weight, quantity,
+          value or by hand, and it lands on the receipt and into part cost.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SALES ===================== -->
+  <section class="mod" id="sales">
+    <h2>Sales and commerce</h2>
+
+    <div class="items">
+      <div class="item">
+        <div class="head"><h4>Quoting and estimating</h4><span class="tag base">Base</span></div>
+        <p>
+          A quote line can pull a method of manufacture, and the quote worksheet then
+          calculates estimated material, subcontract, labour and burden per quantity break and
+          applies markup to reach a price. Winning the quote pushes it to an order — by line,
+          by flagging the whole quote won, or by pulling selected lines from order management.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Order management</h4><span class="tag base">Base</span></div>
+        <p>
+          Header, lines, and <b>releases</b> beneath each line — a release carries its own
+          ship-to, date, plant and warehouse, which is how blanket orders and staged deliveries
+          are modelled. Backorders are created automatically on partial shipment. Promise dates
+          come from the live production schedule rather than a static lead time.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Pricing and discounts</h4><span class="tag base">Base</span></div>
+        <p>
+          Price lists defined globally, by product group, by customer group or per customer,
+          each with effective dates, currency and quantity breaks, in two flavours: unit price
+          lists and discount lists.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> users report the hierarchy genuinely misbehaves — mixing unit
+          price and discount lists applies the discount on top of the unit price instead of
+          stopping at the first match, and discount lists only work correctly with percentages.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Product Configurator</h4><span class="tag base">Base</span></div>
+        <p>
+          A rules engine: the designer builds input pages and rulesets that include or exclude
+          options and subassemblies, set quantities, look values up in tables, read the
+          database or calculate. The output is a configured part with a generated bill of
+          materials and routing, recoverable later from a “smart string” carried on the part
+          number. That method then flows into the job like any other.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Epicor CPQ</h4><span class="tag oem">Acquired</span></div>
+        <p>
+          A separate cloud platform with its own visual programming language. Kinetic data is
+          pulled in as queries which CPQ then treats as ordinary tables. It can match a
+          configuration to an existing part or create a new part revision in Kinetic and build
+          its entire method dynamically, inserting operations and materials from the customer's
+          selections. Adds 3D and augmented-reality configuration and CAD automation.
+        </p>
+        <div class="caveat">
+          <b>Worth noticing:</b> Epicor's CPQ pages do not acknowledge the native configurator,
+          and the configurator pages do not acknowledge CPQ. Anyone on Kinetic evaluating CPQ
+          may be buying a function they already own.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>CRM</h4><span class="tag base">Base</span></div>
+        <p>
+          Contacts, leads and opportunities managed against sales territories, with ordered
+          task sets attached to quotes, opportunities and cases. Cases are the dispatch point
+          for service, carrying warranty status and contract.
+        </p>
+        <div class="caveat">
+          <b>Set expectations:</b> this is a transactional sales tool, not marketing
+          automation. Campaign records track campaigns; there is no email automation, lead
+          scoring or nurture. Most manufacturers pair it with Salesforce or HubSpot.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Sales commissions</h4><span class="tag unk">Barely there</span></div>
+        <p>
+          A rate on a salesperson record that flows order to invoice. Splits across reps, or
+          any rule based on customer, product group or target attainment, are not native —
+          documented practice is user-defined fields plus custom business rules, with payout
+          reported outside the system.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Commerce and portals</h4><span class="tag oem">Magento</span></div>
+        <p>
+          The webstore is Adobe Magento with a real-time Kinetic integration supplying
+          customer-specific pricing, availability and account history. Three tiers: the
+          entry tier is effectively the old customer self-service portal — view quotes,
+          invoices, pricing and stock, pay receivables — while higher tiers add a full cart,
+          punch-out, returns and marketing tools.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FINANCE ===================== -->
+  <section class="mod" id="finance">
+    <h2>Finance and projects</h2>
+
+    <div class="items">
+      <div class="item">
+        <div class="head"><h4>Financials Core</h4><span class="tag base">Base</span></div>
+        <p>
+          A general ledger with dynamic account segments and a rules-based posting engine fed
+          by every transaction in the suite. <b>Multiple books</b> let one company run several
+          charts of accounts at once in different currencies and reporting bases — statutory,
+          management, IFRS — with separate closing calendars, consolidation and elimination
+          across legal entities, and allocations that distribute cost across projects,
+          departments and locations.
+        </p>
+        <p>
+          Payables and receivables include a bank statement workbench, a credit manager
+          workbench with automatic credit holds, deferred revenue and expense, and consolidated
+          invoicing. Cash management covers promissory notes and postdated cheques tracked to
+          settlement, ACH and EFT, positive pay, and lockbox files loading straight into
+          receivables.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Asset Management</h4><span class="tag base">Base</span></div>
+        <p>
+          Assets are created from a payables invoice — supplier, amount, terms and payment all
+          linked to the asset — or by transferring a serialised inventory item into the
+          register. Depreciation by straight line, declining balance, fixed amount per period
+          or your own formula, across multiple books, with ledger entries automated.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Multi-company</h4><span class="tag addon">Licensed modules</span></div>
+        <p>
+          Separate companies, some cloud and some on-premise, with intercompany trading
+          transactions, multi-company journals, global customers, parts, suppliers and shared
+          warehouses, central payments and collections including netting, global credit
+          checking, and costing by plant.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Tax</h4><span class="tag oem">Avalara</span></div>
+        <p>
+          Kinetic calls Avalara per line on orders and invoices and gets back a per-line tax
+          breakdown, with addresses geolocation-validated rather than estimated from a postcode.
+          Exemption certificates and return filing are Avalara's too.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Financial Planning &amp; Analysis</h4><span class="tag oem">DSPanel</span></div>
+        <p>
+          Pulls ERP data into a multi-dimensional model handling several companies, currencies
+          and calendars at once, reachable from a web interface and an Excel add-in. Budget
+          workflow uses approval hierarchies with owners; machine-learning models generate a
+          first-pass forecast; a rules engine automates calculations; consolidation runs in
+          real time with elimination entries.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Project Management</h4><span class="tag base">Base</span> <span class="tag addon">Advanced add-on</span></div>
+        <p>
+          Work-breakdown phases with approvals, against which jobs, purchase orders, inventory
+          transactions and time all post so cost rolls up. Billing on progress, milestones or
+          defined stages; revenue recognised by percentage complete, cost-to-cost or units
+          delivered. A scheduling board allocates people, contractors and equipment.
+        </p>
+        <p>
+          Advanced Project Management replaces the simple structure with configurable cost
+          codes, adds six billing types within one contract, standards-compliant revenue
+          recognition, time-phased budgets and the cost and schedule performance indices.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SERVICE ===================== -->
+  <section class="mod" id="service">
+    <h2>Service, assets and people</h2>
+
+    <div class="items">
+      <div class="item">
+        <div class="head"><h4>Field Service</h4><span class="tag base">Base</span> <span class="tag oem">plus an acquired one</span></div>
+        <p>
+          A service call becomes a service job; technicians book labour, materials and charges
+          against it, and the system decides whether the work is under warranty, chargeable to
+          a service contract, or invoiced. There is a mobile app with offline capability.
+        </p>
+        <div class="caveat">
+          <b>Confusingly:</b> Epicor also sells a separate cloud Field Service Management
+          product acquired from Evron, and its pages do not reconcile the two. Establish which
+          one a quote refers to.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Warranty, contracts and returns</h4><span class="tag base">Base</span></div>
+        <p>
+          Warranties are defined against parts, product groups or serial numbers, extendable by
+          a service contract; contracts carry service levels, automatic billing, expiry and
+          renewal. Returns run under an RMA number through entry, receipt and disposition, the
+          disposition deciding between scrap, a repair job, a replacement or a credit.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Maintenance Management</h4><span class="tag base">Base</span></div>
+        <p>
+          Equipment records driven by maintenance requests that become maintenance jobs.
+          Equipment plans support both <b>time-based</b> intervals and <b>meter-based</b> ones
+          driven by recorded readings. Jobs can carry full operations and spare parts drawn
+          from stock, or be run lightly as text plus user fields.
+        </p>
+        <div class="caveat">
+          <b>In practice:</b> it cannot natively express “whichever comes first” across a
+          time-based and a meter-based plan on one asset — you configure two plans and
+          over-trigger. This is a light maintenance system, not a full asset-management one.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Human capital</h4><span class="tag unk">Treat with suspicion</span></div>
+        <p>
+          The weakest and least honest area of Epicor's public material. The HCM product came
+          from a 2010 acquisition, its product URL now returns a generic index, and independent
+          listings mark it discontinued — while partners still sell it as a module. Independent
+          analysis finds no native payroll processing, benefits administration, talent
+          management or employee self-service; payroll and time-and-attendance are delivered by
+          partners such as ADP. Native labour capture is the shop-floor clock and a time-and-expense
+          app, which is job costing, not workforce management.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PLATFORM ===================== -->
+  <section class="mod" id="platform">
+    <h2>Platform and data</h2>
+    <p class="intro">
+      How customers change Kinetic's behaviour, and how data gets in and out. This layer is
+      genuinely strong — and it is where Epicor's portfolio overlaps itself most.
+    </p>
+
+    <div class="items">
+      <div class="item">
+        <div class="head"><h4>Application Studio and layers</h4><span class="tag base">Base</span></div>
+        <p>
+          A browser-based low-code screen designer. Customisations are stored as named
+          <b>layers</b> holding only the delta from the shipped screen rather than a forked
+          copy, which is what lets them survive upgrades. Layers move between environments
+          through a deployment workbench.
+        </p>
+        <div class="caveat">
+          <b>The wart nobody mentions in the brochure:</b> a layer binds to a <em>menu item</em>.
+          Open the same screen from somewhere else — a drill-down, another form — and you get
+          the base version. Customising one form cascades into customising every form that
+          opens it.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Business Process Management</h4><span class="tag base">Base</span></div>
+        <p>
+          The server-side rules engine, in two kinds. <b>Method directives</b> hook a specific
+          business-object call with pre, base and post stages, so you can inspect and change
+          its parameters or block it outright. <b>Data directives</b> hook a table instead, so
+          they fire however the row was changed — standard ones after the transaction commits,
+          in-transaction ones inside it, where they can roll it back. Widget-based, with a
+          custom-code escape hatch.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Epicor Functions</h4><span class="tag base">Base</span></div>
+        <p>
+          Reusable server-side logic in libraries with typed parameters and their own security
+          and release lifecycle. Built in the same designer as a business rule, but callable
+          from rules, from REST, from scheduled jobs, from screens and from other functions —
+          so logic lives once instead of being copy-pasted across directives. Libraries move
+          staging to promoted with separate URLs, so unpublished logic can be tested.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>REST API</h4><span class="tag base">Base</span></div>
+        <p>
+          An OData service layer exposing business objects, processes, reports, queries and
+          functions — the same layer the interface itself consumes, so anything doable in the
+          UI is doable programmatically. Version 2 adds application keys with access scopes
+          alongside user credentials, which is a materially better security model than version 1.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Queries, dashboards and bulk data</h4><span class="tag base">Base</span> <span class="tag addon">DMT add-on</span></div>
+        <p>
+          <b>Business Activity Queries</b> are a visual SQL builder over the schema and the
+          common currency of the platform — they feed dashboards, search, REST endpoints and
+          external tools. Updatable ones gain write-back, either auto-generated for simple
+          cases or hand-written as rule logic, which is how editable grids get built without a
+          custom screen. The <b>Data Management Tool</b> does bulk load from spreadsheets by
+          calling the business objects rather than writing to SQL, so validation still applies.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Integration — three overlapping products</h4><span class="tag oem">Workato + Jitterbit</span></div>
+        <p>
+          <b>Service Connect</b> is the legacy XML workflow orchestrator, still shipped, no
+          published end of life. <b>Automation Studio</b> is white-labelled Workato with an
+          on-premise agent that reaches inside the firewall without opening ports.
+          <b>Integration Cloud</b> is white-labelled Jitterbit. Epicor lists them as related
+          products and publishes no guidance on when to use which.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Analytics — also three</h4><span class="tag addon">Add-ons</span></div>
+        <p>
+          <b>Data Discovery</b> is embedded in-app dashboards built from queries, with
+          click-through into the underlying record. <b>Data Analytics</b> is Phocas, cube-based,
+          with paid modules for financial statements and budgeting. <b>Grow</b> is the acquired
+          self-service platform with 150-plus connectors. There is no published decision matrix
+          and Epicor's own framing is that they fill different gaps.
+        </p>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>Security</h4><span class="tag base">Base</span></div>
+        <p>
+          Role-based access granted by attaching security codes to menu items, business objects
+          and records, with users inheriting the union of their groups' rights. Field-level
+          security controls read and update per field. Per-table, per-field change logging
+          captures who changed what and when, which is what evidences an audit trail.
+        </p>
+        <div class="caveat">
+          <b>Note:</b> the compliance story is a whitepaper rather than a feature set — the
+          audit and security primitives exist, but no named tooling for data-subject requests
+          or erasure.
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="head"><h4>AI</h4><span class="tag addon">Early</span></div>
+        <p>
+          <b>Prism</b>, announced January 2025, is a set of domain-specific agents behind a
+          conversational layer using retrieval over company data — building automated
+          processes, generating supplier RFQs, parsing returned quotes, updating schedules. One
+          variant is sold on outcomes-based pricing. No model vendor is disclosed anywhere in
+          Epicor's material, which is a notable omission for anyone with a data-governance
+          question.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== GOTCHAS ===================== -->
+  <section class="mod" id="gotchas">
+    <h2>How it behaves in practice</h2>
+    <p class="intro">
+      The things nobody writes in a brochure, gathered from the forum where Epicor's own
+      customers help each other. These are worth more than any feature list — they are what
+      the first year of ownership actually feels like.
+    </p>
+
+    <div class="items">
+      <div class="gotcha">
+        <h4>The finite schedule quietly stops being finite</h4>
+        <p>
+          The finite horizon is a window in days. Inside it capacity is enforced; beyond it the
+          system reverts to infinite scheduling with no warning. One user set a 365-day horizon
+          and confirmed it planned infinitely immediately afterwards. The flag also has to be
+          set in two separate places, and the scheduling type is sticky — a job remembers the
+          type it was first scheduled under.
+        </p>
+      </div>
+      <div class="gotcha">
+        <h4>Customising one screen cascades into several</h4>
+        <p>
+          Because a customisation layer binds to a menu item rather than to the screen, any
+          other route into that screen loads the uncustomised version. Users describe a domino
+          effect where one change forces the creation and maintenance of several further
+          customised forms purely to preserve the first.
+        </p>
+      </div>
+      <div class="gotcha">
+        <h4>Nothing converts the old customisations</h4>
+        <p>
+          The classic interface was retired in May 2026 and there is no automated converter
+          from the old form-script customisations to the new designer. Custom forms, interface
+          modifications, embedded dashboards and any integration that drove the old UI are a
+          manual rebuild-and-retest. This is the largest hidden cost in an upgrade.
+        </p>
+      </div>
+      <div class="gotcha">
+        <h4>A late order keeps eating next month's forecast</h4>
+        <p>
+          Forecast consumption works on a rolling window around the forecast date with no
+          one-to-one matching. An order that misses its ship date stays open and keeps
+          consuming subsequent weeks' forecast as the window moves, inflating planned demand
+          until someone notices.
+        </p>
+      </div>
+      <div class="gotcha">
+        <h4>Kanban never fires if you are already short</h4>
+        <p>
+          The replenishment signal is edge-triggered: stock has to be above the minimum and
+          then fall below it. Start from depleted stock and nothing happens at all.
+        </p>
+      </div>
+      <div class="gotcha">
+        <h4>Supervisors cannot hand work out</h4>
+        <p>
+          The work queue exists only in the shop-floor console, and there is no way to assign
+          work to a named employee from the main application — an open enhancement request,
+          with customers building their own. The material side has a manager view; the labour
+          side does not.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DATES ===================== -->
+  <section class="mod" id="dates">
+    <h2>Dates that matter</h2>
+    <p class="intro">
+      Epicor is mid-transition on two fronts at once, and both have hard dates.
+    </p>
+
+    <div class="timeline">
+      <div class="tl">
+        <span class="when">May 2026</span>
+        <span class="what">
+          <b>The classic interface is gone.</b> Release 2026.1 shipped without the old smart
+          client. Everything is the browser interface now — this has already happened.
+        </span>
+      </div>
+      <div class="tl">
+        <span class="when">~Jan 2028</span>
+        <span class="what">
+          <b>Final on-premise release.</b> 2028.1 is expected to be the last version you can
+          run on your own servers.
+        </span>
+      </div>
+      <div class="tl">
+        <span class="when">31 Dec 2029</span>
+        <span class="what">
+          <b>On-premise active support ends.</b> From 1 January 2030 it is security patches
+          only — no new features.
+        </span>
+      </div>
+      <div class="tl">
+        <span class="when">Ongoing</span>
+        <span class="what">
+          <b>Release cadence is shifting</b> from two named releases a year toward monthly
+          continuous delivery, which Epicor has not yet reconciled with the tiered
+          upgrade-deferral options it sells.
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <div class="closing">
+    <h2>What any of this means for a shop-floor tool</h2>
+    <p>
+      Three things are worth carrying away. First, the <b>job → assembly → operation →
+      material</b> hierarchy is the spine of everything — labour, scrap, costing, scheduling
+      and the queue are all projections of “employee plus operation plus quantity”, and that is
+      the minimum honest data model for any system in this space.
+    </p>
+    <p>
+      Second, <b>concurrent-activity labour splitting</b> — one operator on four machines,
+      hours prorated automatically — is a requirement almost nobody thinks of and everybody
+      eventually needs.
+    </p>
+    <p>
+      Third, and most usefully: the single biggest complaint from Epicor's own customers is
+      that <b>a supervisor cannot hand a specific job to a specific person from the main
+      application</b>, and that the queue is only as good as the schedule behind it. A mature,
+      expensive ERP has an open enhancement request for exactly the problem a custom tool would
+      solve on day one. That is not an argument for building everything — it is an argument for
+      building the one thing the big system does badly, and connecting it to the big system for
+      the rest.
+    </p>
+  </div>
+
+  <footer>
+    Compiled September 2026 from Epicor's product pages, partner and consultancy documentation
+    (Data V Tech, Tomerlin-ERP, Blue Sky ERP, Scaled Solutions, 2WTech, PracticalTek, BISCIT,
+    Encompass, EstesGroup), independent analysis (ERP Research, Top10ERP, ERP Today, Enterprise
+    Times, TechTarget) and the Epicor user community at epiusers.help, which supplied nearly
+    every mechanical detail above.
+    <div class="srcs">
+      Epicor's public pages state licensing only rarely; where this page says
+      <span class="tag unk">Unstated</span> it is because no source would confirm it. Anything
+      marked as a practical caveat comes from customers describing their own systems, not from
+      Epicor. Verify commercial terms with Epicor directly — there is no public price list.
+    </div>
+  </footer>
+
+</div>
