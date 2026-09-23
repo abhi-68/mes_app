@@ -27,52 +27,77 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-steel-50 px-6">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex items-center justify-center gap-3">
-          <span className="brand-rule block h-7 w-1.5 rounded-sm" aria-hidden />
-          <span className="text-lg font-semibold tracking-tight text-navy-900">
-            Thermal Corp<span className="ml-1.5 font-normal text-steel-400">MES</span>
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-6 py-12">
+      <div className="w-full max-w-md">
+        <div className="mb-6 flex items-center justify-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-base font-semibold text-white">
+            T
+          </span>
+          <span className="text-lg font-bold tracking-tight text-gray-950">
+            Thermal Corp<span className="ml-1.5 font-normal text-gray-500">MES</span>
           </span>
         </div>
 
-        <form onSubmit={submit} className="space-y-3">
-          <input
-            type="email"
-            required
-            autoComplete="username"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            aria-label="Email"
-            className="min-h-12 w-full rounded-lg border border-steel-300 bg-white px-3 text-base shadow-card placeholder:text-steel-400 focus:border-navy-600 focus:outline-none"
-          />
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            aria-label="Password"
-            className="min-h-12 w-full rounded-lg border border-steel-300 bg-white px-3 text-base shadow-card placeholder:text-steel-400 focus:border-navy-600 focus:outline-none"
-          />
+        {/* Filament's login: one card, labelled fields, a full-width primary button. */}
+        <div className="rounded-lg border border-gray-200 bg-white p-6">
+          <h1 className="mb-6 text-2xl font-bold tracking-tight text-gray-950">Sign in</h1>
 
-          {error && (
-            <p role="alert" className="rounded-lg bg-blocked-bg px-3 py-2 text-sm text-blocked-fg">
-              {error}
-            </p>
-          )}
+          <form onSubmit={submit} className="space-y-6">
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-1 block text-sm font-medium leading-6 text-gray-950"
+              >
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="username"
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="block min-h-12 w-full rounded-lg border-0 bg-white px-3 text-base text-gray-950 ring-1 ring-inset ring-gray-300 transition duration-75 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="min-h-12 w-full rounded-lg bg-navy-800 px-3 text-base font-medium text-white shadow-card transition-all duration-100 hover:bg-navy-900 active:translate-y-px disabled:bg-steel-300"
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-1 block text-sm font-medium leading-6 text-gray-950"
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block min-h-12 w-full rounded-lg border-0 bg-white px-3 text-base text-gray-950 ring-1 ring-inset ring-gray-300 transition duration-75 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600"
+              />
+            </div>
+
+            {error && (
+              <p
+                role="alert"
+                className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700 ring-1 ring-inset ring-danger-600/10"
+              >
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="min-h-12 w-full rounded-lg bg-gray-900 px-3 text-base font-medium text-white transition duration-75 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400"
+            >
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

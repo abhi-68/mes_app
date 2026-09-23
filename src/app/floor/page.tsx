@@ -34,7 +34,7 @@ export default async function FloorPage() {
       </div>
 
       <section className="mt-8">
-        <SectionHeading note="Left to right is order · tap a station to open it">
+        <SectionHeading>
           The line
         </SectionHeading>
 
@@ -45,7 +45,7 @@ export default async function FloorPage() {
             {lines.map((line) => (
               <div key={line.name ?? "single"}>
                 {line.name && (
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-steel-400">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
                     {line.name}
                   </p>
                 )}
@@ -60,7 +60,7 @@ export default async function FloorPage() {
                         {i < line.stages.length - 1 && (
                           <svg
                             viewBox="0 0 24 24"
-                            className="h-4 w-4 shrink-0 text-steel-300"
+                            className="h-4 w-4 shrink-0 text-gray-300"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2.5"
@@ -87,11 +87,11 @@ export default async function FloorPage() {
 }
 
 const STATE = {
-  BLOCKED: { bar: "bg-blocked-solid", text: "text-blocked-fg", label: "Held up" },
-  RUNNING: { bar: "bg-active-solid", text: "text-active-fg", label: "Running" },
-  QUEUED: { bar: "bg-steel-400", text: "text-steel-500", label: "Waiting" },
-  DONE: { bar: "bg-ok-solid", text: "text-ok-fg", label: "Clear" },
-  IDLE: { bar: "bg-steel-300", text: "text-steel-400", label: "Empty" },
+  BLOCKED: { bar: "bg-danger-600", text: "text-danger-700", label: "Held up" },
+  RUNNING: { bar: "bg-warning-500", text: "text-warning-700", label: "Running" },
+  QUEUED: { bar: "bg-gray-400", text: "text-gray-500", label: "Waiting" },
+  DONE: { bar: "bg-success-600", text: "text-success-700", label: "Clear" },
+  IDLE: { bar: "bg-gray-300", text: "text-gray-400", label: "Empty" },
 } as const;
 
 function StationTile({ station }: { station: FloorStation }) {
@@ -103,12 +103,12 @@ function StationTile({ station }: { station: FloorStation }) {
       <span className={`absolute inset-x-0 top-0 h-1.5 ${tone.bar}`} aria-hidden />
       <Link href={href} className="flex min-h-11 flex-col px-4 pb-3.5 pt-4">
         <p
-          className="truncate text-sm font-semibold leading-tight text-steel-900"
+          className="truncate text-sm font-semibold leading-tight text-gray-900"
           title={station.name}
         >
           {station.name}
         </p>
-        <p className="tnum mt-2 text-[2rem] font-semibold leading-none text-navy-900">
+        <p className="tnum mt-2 text-[2rem] font-semibold leading-none text-gray-950">
           {station.wip}
         </p>
         <p className={`mt-1 text-xs font-medium ${tone.text}`}>{tone.label}</p>
@@ -119,16 +119,16 @@ function StationTile({ station }: { station: FloorStation }) {
 
 function Legend() {
   const items: [string, string][] = [
-    ["bg-blocked-solid", "Held up"],
-    ["bg-active-solid", "Running"],
-    ["bg-steel-400", "Waiting"],
-    ["bg-ok-solid", "Clear"],
-    ["bg-steel-300", "Empty"],
+    ["bg-danger-600", "Held up"],
+    ["bg-warning-500", "Running"],
+    ["bg-gray-400", "Waiting"],
+    ["bg-success-600", "Clear"],
+    ["bg-gray-300", "Empty"],
   ];
   return (
     <div className="mt-4 flex flex-wrap items-center gap-4">
       {items.map(([colour, label]) => (
-        <span key={label} className="flex items-center gap-1.5 text-xs text-steel-500">
+        <span key={label} className="flex items-center gap-1.5 text-xs text-gray-500">
           <span className={`h-2.5 w-2.5 rounded-sm ${colour}`} aria-hidden />
           {label}
         </span>

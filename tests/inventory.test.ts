@@ -25,6 +25,7 @@ import {
   coverageFor,
   availableNow,
   reconcile,
+  shipFinishedGoods,
   CommandError,
 } from "../src/lib/inventory";
 
@@ -394,6 +395,52 @@ test("ledger and balances reconcile after a full cycle", async () => {
 
   const drift = await reconcile();
   assert.deepEqual(drift, [], "balances must equal the sum of movement history");
+});
+
+test("shipping a finished unit takes it off the rack and keeps the ledger straight", async () => {
+  await receiveStock({
+    commandId: uid("rcv"),
+    itemId: MOTOR,
+    locationId: STORES,
+    quantity: 3,
+    lot: { batchNumber: "ORD-SHIP-1" },
+  });
+
+  await shipFinishedGoods({
+    commandId: uid("ship"),
+    itemId: MOTOR,
+    locationId: STORES,
+    quantity: 2,
+  });
+
+  assert.equal((await balance()).onHand, 1, "two left on a truck");
+  assert.deepEqual(await reconcile(), [], "a shipment is a movement, not a silent write-down");
+});
+
+test("the same truck load recorded twice ships once", async () => {
+  await receiveStock({ commandId: uid("rcv"), itemId: MOTOR, locationId: STORES, quantity: 5 });
+  const payload = { commandId: uid("ship"), itemId: MOTOR, locationId: STORES, quantity: 2 };
+
+  await shipFinishedGoods(payload);
+  await shipFinishedGoods(payload);
+
+  assert.equal((await balance()).onHand, 3, "replayed, not shipped twice");
+});
+
+test("a unit that is not there cannot be shipped", async () => {
+  await receiveStock({ commandId: uid("rcv"), itemId: MOTOR, locationId: STORES, quantity: 1 });
+
+  await assert.rejects(
+    () =>
+      shipFinishedGoods({
+        commandId: uid("ship"),
+        itemId: MOTOR,
+        locationId: STORES,
+        quantity: 2,
+      }),
+    (e: unknown) => e instanceof CommandError && e.code === "INSUFFICIENT_STOCK"
+  );
+  assert.equal((await balance()).onHand, 1, "nothing left the rack");
 });
 
 test("partial reservation records a shortage rather than failing", async () => {

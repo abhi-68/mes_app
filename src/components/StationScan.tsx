@@ -49,14 +49,14 @@ export function StationScan({ found }: { found?: string }) {
         label="Scan a traveler"
         placeholder="Scan the step, work order or batch code"
       />
-      {pending && <p className="mt-2 text-sm text-steel-500">Looking it up…</p>}
+      {pending && <p className="mt-2 text-sm text-gray-500">Looking it up…</p>}
       {error && (
-        <p role="alert" className="mt-2 text-sm text-blocked-fg">
+        <p role="alert" className="mt-2 text-sm text-danger-700">
           {error}
         </p>
       )}
       {found && !error && (
-        <p role="status" className="mt-2 text-sm text-ok-fg">
+        <p role="status" className="mt-2 text-sm text-success-700">
           Showing {found} at the top.
         </p>
       )}

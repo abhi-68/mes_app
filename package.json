@@ -14,14 +14,18 @@
     "test:setup": "node scripts/setup-db.mjs --test",
     "db:setup": "node scripts/setup-db.mjs",
     "simulate": "node scripts/simulate.mjs",
+    "deck": "node scripts/deck.mjs",
     "walk": "node scripts/walk.mjs",
     "verify:labels": "tsx scripts/verify-labels.mts",
     "audit": "node --import tsx --experimental-test-module-mocks scripts/audit.mts",
-    "db:demo": "node scripts/setup-db.mjs --clean"
+    "db:demo": "node scripts/setup-db.mjs --demo",
+    "db:clean": "node scripts/setup-db.mjs --clean"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@heroicons/react": "^2.2.0",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
     "next": "16.3.5",
@@ -37,6 +41,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "bwip-js": "^4.11.4",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
@@ -44,7 +49,6 @@
     "playwright": "^1.63.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5",
-    "bwip-js": "^4.11.4"
+    "typescript": "^5"
   }
 }

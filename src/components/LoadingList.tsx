@@ -42,8 +42,8 @@ export function LoadingList({ units }: { units: LoadableUnit[] }) {
       {message && (
         <p
           role={message.error ? "alert" : "status"}
-          className={`rounded-md px-4 py-3 text-sm ${
-            message.error ? "bg-blocked-bg text-blocked-fg" : "bg-ok-bg text-ok-fg"
+          className={`rounded-lg px-4 py-3 text-sm ${
+            message.error ? "bg-danger-50 text-danger-700" : "bg-success-50 text-success-700"
           }`}
         >
           {message.text}
@@ -53,7 +53,7 @@ export function LoadingList({ units }: { units: LoadableUnit[] }) {
       {waiting.length === 0 ? (
         <EmptyState
           title="Nothing to load"
-          hint="Finished units appear here as soon as their last step is signed off."
+
         />
       ) : (
         <div className="space-y-3">
@@ -61,12 +61,12 @@ export function LoadingList({ units }: { units: LoadableUnit[] }) {
             <Panel key={u.lotId} className="px-5 py-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-lg font-semibold text-steel-900">{u.itemName}</p>
-                  <p className="tnum mt-0.5 text-sm text-steel-500">
+                  <p className="text-lg font-semibold text-gray-900">{u.itemName}</p>
+                  <p className="tnum mt-0.5 text-sm text-gray-500">
                     {u.orderNumber ?? u.batchNumber}
                     {u.customerName ? ` · ${u.customerName}` : ""}
                   </p>
-                  <p className="mt-1 text-sm text-steel-600">
+                  <p className="mt-1 text-sm text-gray-600">
                     <span className="tnum font-medium">
                       {u.quantity} {u.unit}
                     </span>
@@ -78,12 +78,12 @@ export function LoadingList({ units }: { units: LoadableUnit[] }) {
               <div className="mt-4">
                 {confirming === u.lotId ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-steel-600">On the truck?</span>
+                    <span className="text-sm text-gray-600">On the truck?</span>
                     <button
                       type="button"
                       disabled={pending}
                       onClick={() => load(u)}
-                      className="inline-flex min-h-14 items-center rounded-lg bg-navy-800 px-6 text-base font-medium text-white disabled:opacity-50"
+                      className="inline-flex min-h-14 items-center rounded-lg bg-gray-900 px-6 text-base font-medium text-white disabled:opacity-50"
                     >
                       {pending ? "Saving…" : "Yes, loaded"}
                     </button>
@@ -91,7 +91,7 @@ export function LoadingList({ units }: { units: LoadableUnit[] }) {
                       type="button"
                       disabled={pending}
                       onClick={() => setConfirming(null)}
-                      className="inline-flex min-h-14 items-center rounded-lg border border-steel-300 bg-white px-6 text-base text-steel-700"
+                      className="inline-flex min-h-14 items-center rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-6 text-base text-gray-700"
                     >
                       Cancel
                     </button>
@@ -101,7 +101,7 @@ export function LoadingList({ units }: { units: LoadableUnit[] }) {
                     type="button"
                     disabled={pending || !u.orderId}
                     onClick={() => setConfirming(u.lotId)}
-                    className="inline-flex min-h-14 items-center rounded-lg bg-navy-800 px-8 text-base font-medium text-white disabled:opacity-50"
+                    className="inline-flex min-h-14 items-center rounded-lg bg-gray-900 px-8 text-base font-medium text-white disabled:opacity-50"
                   >
                     Loaded
                   </button>
@@ -114,14 +114,14 @@ export function LoadingList({ units }: { units: LoadableUnit[] }) {
 
       {gone.length > 0 && (
         <section>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-steel-400">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
             Already gone
           </p>
-          <Panel className="divide-y divide-steel-100">
+          <Panel className="divide-y divide-gray-100">
             {gone.map((u) => (
               <div key={u.lotId} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
-                <span className="text-sm text-steel-600">{u.itemName}</span>
-                <span className="tnum text-xs text-steel-400">{u.noteNumber}</span>
+                <span className="text-sm text-gray-600">{u.itemName}</span>
+                <span className="tnum text-xs text-gray-400">{u.noteNumber}</span>
               </div>
             ))}
           </Panel>

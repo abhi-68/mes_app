@@ -28,11 +28,11 @@ export default async function PeoplePage() {
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-9">
       <PageHeader
         title="People & stations"
-        subtitle="Workers see only their own station. Supervisors see every station and can correct recorded times. Admins can also change this setup."
+        subtitle="Who can see and do what."
         actions={
           <Link
             href="/admin"
-            className="inline-flex min-h-11 items-center text-sm text-steel-500 hover:text-navy-900"
+            className="inline-flex min-h-11 items-center text-sm text-gray-500 hover:text-gray-950"
           >
             Back to setup
           </Link>
@@ -41,15 +41,15 @@ export default async function PeoplePage() {
 
       <section className="mt-8">
         <SectionHeading note={`${people.length} people`}>People</SectionHeading>
-        <Panel className="divide-y divide-steel-100">
+        <Panel className="divide-y divide-gray-100">
           {people.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
               <div>
-                <p className={`text-sm font-medium ${p.active ? "text-steel-900" : "text-steel-400"}`}>
+                <p className={`text-sm font-medium ${p.active ? "text-gray-900" : "text-gray-400"}`}>
                   {p.name}
-                  {!p.active && <span className="ml-2 text-xs text-steel-400">deactivated</span>}
+                  {!p.active && <span className="ml-2 text-xs text-gray-400">deactivated</span>}
                 </p>
-                <p className="text-xs text-steel-400">
+                <p className="text-xs text-gray-400">
                   {p.email} · {ROLE_LABEL[p.role]}
                   {p.station ? ` · ${p.station.name}` : ""}
                 </p>
@@ -60,26 +60,26 @@ export default async function PeoplePage() {
         </Panel>
 
         <Panel className="mt-4 p-5">
-          <p className="mb-3 text-sm font-medium text-steel-700">Add someone</p>
+          <p className="mb-3 text-sm font-medium text-gray-700">Add someone</p>
           <NewUserForm stations={stationRows.map((s) => ({ id: s.id, name: s.name }))} />
         </Panel>
       </section>
 
       <section className="mt-10">
         <SectionHeading note={`${stationRows.length} stations`}>Stations</SectionHeading>
-        <Panel className="divide-y divide-steel-100">
+        <Panel className="divide-y divide-gray-100">
           {stationRows.map((s) => (
             <div key={s.id} className="flex items-center justify-between gap-3 px-5 py-3">
               <div>
-                <p className="text-sm text-steel-900">{s.name}</p>
-                {s.description && <p className="text-xs text-steel-400">{s.description}</p>}
+                <p className="text-sm text-gray-900">{s.name}</p>
+                {s.description && <p className="text-xs text-gray-400">{s.description}</p>}
               </div>
             </div>
           ))}
         </Panel>
 
         <Panel className="mt-4 p-5">
-          <p className="mb-3 text-sm font-medium text-steel-700">Add a station</p>
+          <p className="mb-3 text-sm font-medium text-gray-700">Add a station</p>
           <NewStationForm />
         </Panel>
       </section>

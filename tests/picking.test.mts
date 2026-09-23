@@ -110,18 +110,26 @@ const pick = (batchNumber: string, quantity: number) =>
 
 const line = async () => (await pickListFor(TASK))[0];
 
-// --- Start no longer deducts --------------------------------------------
+// --- Start waits for the material ---------------------------------------
 
-test("starting a step commits the material but takes nothing off the shelf", async () => {
+test("a step will not start until the material has been collected", async () => {
   const before = await balance();
   assert.equal(before.onHand, 26);
 
-  assert.equal((await startTask(TASK, randomUUID())).ok, true);
+  const res = await startTask(TASK, randomUUID());
+  assert.equal(res.ok, false, "the rack is not the bench");
+  if (!res.ok) assert.match(res.error, /Collect the material first/);
 
   const after = await balance();
   assert.equal(after.onHand, 26, "stock is still on the rack");
-  assert.equal(after.activeReserved, 10, "and committed to this step");
+  assert.equal(after.activeReserved, 0, "and nothing was committed on its behalf");
   assert.equal((await db.select().from(inventoryMovements).where(eq(inventoryMovements.type, "ISSUE"))).length, 0);
+});
+
+test("collecting it is what lets the step start", async () => {
+  assert.equal((await pick(BATCH_B, 10)).ok, true);
+  assert.equal((await startTask(TASK, randomUUID())).ok, true);
+  assert.equal((await balance()).onHand, 16, "and the stock left when it was scanned");
 });
 
 test("the step still refuses to start when the material is not there", async () => {
@@ -132,13 +140,11 @@ test("the step still refuses to start when the material is not there", async () 
 });
 
 test("the pick list says what to go and get", async () => {
-  await startTask(TASK, randomUUID());
   const l = await line();
   assert.equal(l.itemName, "Galvanized Sheet");
   assert.equal(l.required, 10);
   assert.equal(l.taken, 0);
   assert.equal(l.outstanding, 10);
-  assert.equal(l.reserved, 10);
 });
 
 // --- Picking -------------------------------------------------------------

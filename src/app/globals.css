@@ -1,177 +1,262 @@
 @import "tailwindcss";
 
 /*
-  Thermal Corp MES — design tokens.
+  Design tokens.
 
-  Grounded in Thermal Corporation's own printed identity: the deep navy wordmark and
-  the chartreuse banner used across their Air Handlers catalog. Surfaces are steel
-  greys rather than warm neutrals, because the subject is galvanized sheet metal.
+  THE INTERFACE HAS NO COLOUR. Chrome, surfaces, type, borders and buttons are all
+  neutral grey. That is not restraint for its own sake: on a floor screen the only
+  colour present must be the colour that means something, or a red fault stops
+  being louder than a navigation bar and somebody keeps working on a jammed machine.
 
-  Typeface is IBM Plex — drawn for technical products, and self-hosted through
-  @fontsource so there is no build-time or runtime call to a font CDN. Plex Mono
-  carries every number that has to line up in a column: order numbers, quantities,
-  durations, percentages.
+  Colour is therefore reserved for STATE, and the scale is the one a maintenance
+  fitter already knows:
 
-  Status colour is never carried by hue alone — every status also carries a distinct
-  label and, where it matters, a dot, so it survives a glance from across a shop
-  floor and works for colour-blind users.
+    red     stopped — fault, blocked, hard stoppage
+    amber   waiting — standby, at risk, needs a decision
+    green   running — actively producing
+    blue    informational — planned, queued, finished, shipped
+    grey    inactive — nothing is happening and nothing is wrong
+
+  Nothing is signalled by colour alone anywhere. Every state carries a word, and
+  usually a dot as well, because a colour-blind operator has to be able to work
+  safely and because a screenshot in an email has to still make sense.
 */
 
 :root {
-  /* Brand */
-  --navy-950: #071829;
-  --navy-900: #0d2440;
-  --navy-800: #16365c;
-  --navy-700: #1f4a7a;
-  --navy-600: #2d6199;
-  --chartreuse: #c2d62e;
-  --chartreuse-dim: #a8ba22;
-
-  /* Steel neutrals */
-  --steel-50: #f7f8fa;
-  --steel-100: #eef0f4;
-  --steel-200: #e0e3ea;
-  --steel-300: #c6ccd7;
-  --steel-400: #949bab;
-  --steel-500: #697183;
-  --steel-600: #4c5364;
-  --steel-700: #353b48;
-  --steel-900: #191d25;
-
-  /* Status */
-  --ok-bg: #e4f4ea;
-  --ok-fg: #12703f;
-  --ok-solid: #1a8a4f;
-
-  --active-bg: #fdf2dd;
-  --active-fg: #8a5a09;
-  --active-solid: #d4900f;
-
-  --blocked-bg: #fde9e7;
-  --blocked-fg: #9c2a1c;
-  --blocked-solid: #c4382a;
-
-  --idle-bg: #eef0f4;
-  --idle-fg: #5b6274;
-  --idle-solid: #aeb4c0;
-
   /*
-    Ownership. Deliberately NOT one of the status colours above: "this one is
-    yours" is orthogonal to whether the step is ready, running or blocked, and a
-    worker needs to read both off the same card at once. Navy is the only family
-    no status uses, so it can carry ownership without ever being mistaken for one.
+    Primary IS the neutral scale. There is no brand hue.
+    primary-900 is the one "strong" surface: the button you are meant to press.
   */
-  --mine-bg: #e7eef7;
-  --mine-fg: #16365c;
-  --mine-solid: #2d6199;
+  --primary-50: #f8f9fa;
+  --primary-100: #f1f3f5;
+  --primary-200: #e6e8eb;
+  --primary-300: #d3d6da;
+  --primary-400: #9ca3af;
+  --primary-500: #6b7280;
+  --primary-600: #4b5563;
+  --primary-700: #374151;
+  --primary-800: #1f2328;
+  --primary-900: #16181d;
+  --primary-950: #0b0c0e;
+
+  /* Neutrals, very slightly cool — Linear's grey rather than Tailwind's. */
+  --gray-50: #fafbfc;
+  --gray-100: #f4f5f7;
+  --gray-200: #e8eaed;
+  --gray-300: #d6d9dd;
+  --gray-400: #9aa0a8;
+  --gray-500: #6e747d;
+  --gray-600: #545961;
+  --gray-700: #3d4148;
+  --gray-800: #26292e;
+  --gray-900: #16181d;
+  --gray-950: #0b0c0e;
+
+  /* ---- State. The only colour in the product. ---- */
+
+  /* Running — actively producing. */
+  --success-50: #edf8f1;
+  --success-500: #2f9e5e;
+  --success-600: #25814c;
+  --success-700: #1d663c;
+  --success-700: #1d663c;
+
+  /* Waiting — standby, at risk, wants a decision. */
+  --warning-50: #fdf6e7;
+  --warning-500: #c98a12;
+  --warning-600: #a8710e;
+  --warning-700: #85590b;
+
+  /* Stopped — fault, blocked. */
+  --danger-50: #fdeff0;
+  --danger-500: #d13b47;
+  --danger-600: #b32b37;
+  --danger-700: #8f222c;
+
+  /* Informational — planned, queued, finished, in transit. */
+  --info-50: #eef4fd;
+  --info-500: #3d72c9;
+  --info-600: #305ca6;
+  --info-700: #274a86;
 
   --background: #ffffff;
-  --foreground: var(--steel-900);
+  --foreground: var(--gray-950);
 
   /*
-    Elevation. Two levels only — a resting surface and one that has been lifted,
-    such as a card under the cursor or a menu. Everything else is a border.
-    Shadows are tinted navy rather than black; grey-on-grey shadows read as dirt.
+    Elevation. Filament leans on a hairline ring (ring-gray-950/5) for definition
+    and uses shadow only to lift a surface slightly off the grey page.
   */
-  --shadow-sm: 0 1px 2px 0 rgb(13 36 64 / 0.04), 0 1px 3px 0 rgb(13 36 64 / 0.06);
-  --shadow-md:
-    0 2px 4px -1px rgb(13 36 64 / 0.06), 0 8px 16px -4px rgb(13 36 64 / 0.08);
-  --shadow-lg:
-    0 4px 8px -2px rgb(13 36 64 / 0.08), 0 20px 32px -8px rgb(13 36 64 / 0.12);
+  /* Depth comes from a hairline border, not a drop shadow. */
+  --shadow-sm: 0 1px 2px 0 rgb(11 12 14 / 0.04);
+  --shadow-md: 0 1px 3px 0 rgb(11 12 14 / 0.06);
+  --shadow-lg: 0 8px 24px -8px rgb(11 12 14 / 0.12);
 }
+
+/*
+  Setup used to be a different hue so an admin knew they had left the floor. With a
+  neutral interface that cue has to come from somewhere that is not colour, so it
+  is the sidebar label and the page title — the same way Linear tells you which
+  workspace you are in without repainting the app.
+*/
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --color-navy-950: var(--navy-950);
-  --color-navy-900: var(--navy-900);
-  --color-navy-800: var(--navy-800);
-  --color-navy-700: var(--navy-700);
-  --color-navy-600: var(--navy-600);
-  --color-chartreuse: var(--chartreuse);
-  --color-chartreuse-dim: var(--chartreuse-dim);
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+  --color-primary-950: var(--primary-950);
 
-  --color-steel-50: var(--steel-50);
-  --color-steel-100: var(--steel-100);
-  --color-steel-200: var(--steel-200);
-  --color-steel-300: var(--steel-300);
-  --color-steel-400: var(--steel-400);
-  --color-steel-500: var(--steel-500);
-  --color-steel-600: var(--steel-600);
-  --color-steel-700: var(--steel-700);
-  --color-steel-900: var(--steel-900);
+  /*
+    `accent-*` is deliberately the same neutral scale as primary. It used to be a
+    gold, spent on every button, which is how the interface ended up shouting.
+    Kept as an alias so nothing renders unstyled, but there is no accent hue.
+  */
+  --color-accent-50: var(--primary-50);
+  --color-accent-100: var(--primary-100);
+  --color-accent-200: var(--primary-200);
+  --color-accent-300: var(--primary-300);
+  --color-accent-400: var(--primary-400);
+  --color-accent-500: var(--primary-900);
+  --color-accent-600: var(--primary-900);
+  --color-accent-700: var(--primary-800);
+  --color-accent-800: var(--primary-800);
+  --color-accent-900: var(--primary-900);
+  --color-accent-950: var(--primary-950);
 
-  --color-ok-bg: var(--ok-bg);
-  --color-ok-fg: var(--ok-fg);
-  --color-ok-solid: var(--ok-solid);
-  --color-active-bg: var(--active-bg);
-  --color-active-fg: var(--active-fg);
-  --color-active-solid: var(--active-solid);
-  --color-blocked-bg: var(--blocked-bg);
-  --color-blocked-fg: var(--blocked-fg);
-  --color-blocked-solid: var(--blocked-solid);
-  --color-idle-bg: var(--idle-bg);
-  --color-idle-fg: var(--idle-fg);
-  --color-idle-solid: var(--idle-solid);
-  --color-mine-bg: var(--mine-bg);
-  --color-mine-fg: var(--mine-fg);
-  --color-mine-solid: var(--mine-solid);
+  --color-success-50: var(--success-50);
+  --color-success-500: var(--success-500);
+  --color-success-600: var(--success-600);
+  --color-success-700: var(--success-700);
+  --color-warning-50: var(--warning-50);
+  --color-warning-500: var(--warning-500);
+  --color-warning-600: var(--warning-600);
+  --color-warning-700: var(--warning-700);
+  --color-danger-50: var(--danger-50);
+  --color-danger-500: var(--danger-500);
+  --color-danger-600: var(--danger-600);
+  --color-danger-700: var(--danger-700);
+  --color-info-50: var(--info-50);
+  --color-info-500: var(--info-500);
+  --color-info-600: var(--info-600);
+  --color-info-700: var(--info-700);
 
   --shadow-card: var(--shadow-sm);
   --shadow-raised: var(--shadow-md);
   --shadow-float: var(--shadow-lg);
 
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo,
-    Consolas, monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 body {
-  background: var(--steel-50);
+  background: var(--gray-50);
   color: var(--foreground);
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/*
-  Headings are set tight. Plex Sans is drawn a little wide, and default tracking at
-  display sizes leaves headings looking loose beside dense tables.
-*/
 h1,
 h2,
 h3 {
-  letter-spacing: -0.018em;
+  letter-spacing: -0.02em;
 }
 
-/* Anything that has to line up in a column: order numbers, counts, durations. */
+/*
+  Numbers that sit in a column. Filament does not switch family for these — Inter
+  has proper tabular figures, so only the numeric variant changes.
+*/
 .tnum {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
 }
 
 /* A small capitalised label above a value or a section. */
 .eyebrow {
   font-size: 0.6875rem;
   line-height: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--steel-400);
+  color: var(--gray-400);
 }
 
-/* The brand rule — a chartreuse bar, as on their printed covers. */
+/* Kept for markup that still references it. A hairline, not a brand stripe. */
 .brand-rule {
-  background: linear-gradient(180deg, var(--chartreuse) 0%, var(--chartreuse-dim) 100%);
+  background: var(--gray-200);
 }
 
 /* Visible keyboard focus everywhere — shop tablets and office keyboards both. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--navy-600);
+  outline: 2px solid var(--gray-900);
   outline-offset: 2px;
   border-radius: 3px;
+}
+
+/*
+  Scrollbars.
+
+  The platform default is a wide grey trough that draws a hard vertical line down
+  every panel and table, which on a page built out of hairlines is the loudest
+  thing on it. This is the same overlay treatment Linear uses: no track, a thumb
+  that only appears against content, inset so it never touches the border.
+*/
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-300) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--gray-300);
+  border-radius: 999px;
+  border: 4px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gray-400);
+}
+
+/*
+  Press feedback.
+
+  A tap on a floor tablet has no cursor and no hover, so the only confirmation
+  that the machine heard you is the control moving. It is deliberately quick:
+  120ms reads as responsive, and anything slower reads as the app being slow.
+*/
+button:not(:disabled),
+a[role="button"],
+[type="submit"]:not(:disabled) {
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out,
+    color 120ms ease-out,
+    transform 80ms ease-out;
+}
+
+button:not(:disabled):active,
+a[role="button"]:active,
+[type="submit"]:not(:disabled):active {
+  transform: scale(0.985);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -180,5 +265,12 @@ h3 {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Scale is motion too, and it is the part that causes trouble. */
+  button:active,
+  a[role="button"]:active,
+  [type="submit"]:active {
+    transform: none;
   }
 }

@@ -454,3 +454,29 @@ test("N14 — reserved stock does not count as free against the threshold", asyn
   assert.ok(reorder, "4 free once 2 are promised elsewhere");
   assert.match(reorder.detail ?? "", /4 ea free/);
 });
+
+test("N15 — the threshold is the whole item, not one batch or one shelf", async () => {
+  await db.update(items).set({ reorderPoint: 5 }).where(eq(items.id, MOTOR));
+
+  const [bay] = await db
+    .insert(inventoryLocations)
+    .values({ code: "BAY-02", name: "Goods in bay 2" })
+    .returning();
+
+  // Four separate deliveries, none of which on its own clears a point of 5.
+  for (const [i, locationId] of [STORES, STORES, bay.id, bay.id].entries()) {
+    await receiveStock({
+      commandId: uid(`recv${i}`),
+      itemId: MOTOR,
+      locationId,
+      quantity: 3,
+      lot: { batchNumber: `MTR-BATCH-${i}` },
+    });
+  }
+
+  assert.equal(
+    (await alertsFor(supervisor)).some((a) => a.kind === "BELOW_REORDER"),
+    false,
+    "12 in four batches across two locations is not a shortage, even though every batch is under 5"
+  );
+});

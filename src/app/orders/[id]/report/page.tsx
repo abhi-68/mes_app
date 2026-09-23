@@ -28,7 +28,7 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
         actions={
           <Link
             href={`/orders/${orderId}`}
-            className="inline-flex min-h-11 items-center text-sm text-steel-500 hover:text-navy-900"
+            className="inline-flex min-h-11 items-center text-sm text-gray-500 hover:text-gray-950"
           >
             Back to order
           </Link>
@@ -49,18 +49,18 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
         ].map(([label, value]) => (
           <Panel key={label} className="px-4 py-3">
             <p className="eyebrow">{label}</p>
-            <p className="tnum mt-1 text-lg font-semibold text-navy-900">{value}</p>
+            <p className="tnum mt-1 text-lg font-semibold text-gray-950">{value}</p>
           </Panel>
         ))}
       </div>
 
       {/* --- Steps --- */}
       <section className="mt-8">
-        <SectionHeading note="Who signed each one off, and how long it took">Steps</SectionHeading>
+        <SectionHeading>Steps</SectionHeading>
         <Panel className="overflow-hidden">
           <table className="w-full">
-            <thead className="bg-steel-50/60">
-              <tr className="border-b border-steel-200">
+            <thead className="bg-gray-50/60">
+              <tr className="border-b border-gray-200">
                 <th className={TH}>#</th>
                 <th className={TH}>Step</th>
                 <th className={TH}>Station</th>
@@ -73,22 +73,22 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
             <tbody>
               {r.steps.map((s, i) => (
                 <tr key={i} className={TR}>
-                  <td className={`${TD} tnum text-steel-400`}>{s.sequence}</td>
-                  <td className={`${TD} text-steel-800`}>{s.name}</td>
-                  <td className={`${TD} text-steel-600`}>{s.stationName ?? "—"}</td>
+                  <td className={`${TD} tnum text-gray-400`}>{s.sequence}</td>
+                  <td className={`${TD} text-gray-800`}>{s.name}</td>
+                  <td className={`${TD} text-gray-600`}>{s.stationName ?? "—"}</td>
                   <td className={TD}>
                     <Chip tone={s.status === "DONE" ? "neutral" : "quiet"}>{s.status}</Chip>
                   </td>
-                  <td className={`${TD} tnum whitespace-nowrap text-right text-steel-700`}>
+                  <td className={`${TD} tnum whitespace-nowrap text-right text-gray-700`}>
                     {s.minutes > 0 ? formatMinutes(s.minutes) : "—"}
                     {s.expectedMinutes ? (
-                      <span className="block text-xs text-steel-400">
+                      <span className="block text-xs text-gray-400">
                         est {formatMinutes(s.expectedMinutes)}
                       </span>
                     ) : null}
                   </td>
-                  <td className={`${TD} text-steel-600`}>{s.completedBy ?? "—"}</td>
-                  <td className={`${TD} whitespace-nowrap text-steel-500`}>
+                  <td className={`${TD} text-gray-600`}>{s.completedBy ?? "—"}</td>
+                  <td className={`${TD} whitespace-nowrap text-gray-500`}>
                     {s.completedAt ? formatWhen(s.completedAt) : "—"}
                   </td>
                 </tr>
@@ -111,13 +111,13 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
         </SectionHeading>
         {r.materials.length === 0 ? (
           <Panel className="px-5 py-4">
-            <p className="text-sm text-steel-500">Nothing has been drawn against this order yet.</p>
+            <p className="text-sm text-gray-500">Nothing has been drawn against this order yet.</p>
           </Panel>
         ) : (
           <Panel className="overflow-hidden">
             <table className="w-full">
-              <thead className="bg-steel-50/60">
-                <tr className="border-b border-steel-200">
+              <thead className="bg-gray-50/60">
+                <tr className="border-b border-gray-200">
                   <th className={TH}>Part</th>
                   <th className={TH}>Used at</th>
                   <th className={`${TH} text-right`}>Qty</th>
@@ -129,11 +129,11 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
                 {r.materials.map((m, i) => (
                   <tr key={i} className={TR}>
                     <td className={TD}>
-                      <p className="text-steel-800">{m.itemName}</p>
-                      <p className="tnum mt-0.5 font-mono text-xs text-steel-400">{m.sku}</p>
+                      <p className="text-gray-800">{m.itemName}</p>
+                      <p className="tnum mt-0.5 font-mono text-xs text-gray-400">{m.sku}</p>
                     </td>
-                    <td className={`${TD} text-steel-600`}>{m.stepName}</td>
-                    <td className={`${TD} tnum text-right text-steel-800`}>
+                    <td className={`${TD} text-gray-600`}>{m.stepName}</td>
+                    <td className={`${TD} tnum text-right text-gray-800`}>
                       {m.quantity} {m.unit}
                     </td>
                     <td className={TD}>
@@ -147,7 +147,7 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
                         <Chip tone="quiet">No batch</Chip>
                       )}
                     </td>
-                    <td className={`${TD} tnum font-mono text-xs text-steel-600`}>
+                    <td className={`${TD} tnum font-mono text-xs text-gray-600`}>
                       {m.heatNumber ?? "—"}
                     </td>
                   </tr>
@@ -161,11 +161,11 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
       {/* --- Quality --- */}
       {r.quality.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="Every verdict, with a name against it">Quality</SectionHeading>
+          <SectionHeading>Quality</SectionHeading>
           <Panel className="overflow-hidden">
             <table className="w-full">
-              <thead className="bg-steel-50/60">
-                <tr className="border-b border-steel-200">
+              <thead className="bg-gray-50/60">
+                <tr className="border-b border-gray-200">
                   <th className={TH}>Verdict</th>
                   <th className={TH}>Step</th>
                   <th className={`${TH} text-right`}>Qty</th>
@@ -179,10 +179,10 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
                     <td className={TD}>
                       <Chip tone={q.kind === "SCRAP" ? "alert" : "quiet"}>{q.kind}</Chip>
                     </td>
-                    <td className={`${TD} text-steel-600`}>{q.stepName}</td>
-                    <td className={`${TD} tnum text-right text-steel-800`}>{q.quantity}</td>
-                    <td className={`${TD} text-steel-600`}>{q.reason ?? "—"}</td>
-                    <td className={`${TD} text-steel-600`}>{q.actorName ?? "—"}</td>
+                    <td className={`${TD} text-gray-600`}>{q.stepName}</td>
+                    <td className={`${TD} tnum text-right text-gray-800`}>{q.quantity}</td>
+                    <td className={`${TD} text-gray-600`}>{q.reason ?? "—"}</td>
+                    <td className={`${TD} text-gray-600`}>{q.actorName ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -196,11 +196,11 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
         {r.subAssemblies.length > 0 && (
           <section>
             <SectionHeading>Built for this unit</SectionHeading>
-            <Panel className="divide-y divide-steel-100">
+            <Panel className="divide-y divide-gray-100">
               {r.subAssemblies.map((c) => (
                 <div key={c.orderNumber} className="flex items-center justify-between px-5 py-3">
-                  <span className="text-sm text-steel-800">{c.itemName}</span>
-                  <span className="tnum text-xs text-steel-400">{c.orderNumber}</span>
+                  <span className="text-sm text-gray-800">{c.itemName}</span>
+                  <span className="tnum text-xs text-gray-400">{c.orderNumber}</span>
                 </div>
               ))}
             </Panel>
@@ -209,14 +209,14 @@ export default async function ProductionReportPage(props: PageProps<"/orders/[id
 
         <section>
           <SectionHeading>Dispatch</SectionHeading>
-          <Panel className="divide-y divide-steel-100">
+          <Panel className="divide-y divide-gray-100">
             {r.shipments.length === 0 ? (
-              <p className="px-5 py-4 text-sm text-steel-500">Not shipped.</p>
+              <p className="px-5 py-4 text-sm text-gray-500">Not shipped.</p>
             ) : (
               r.shipments.map((s) => (
                 <div key={s.noteNumber} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
-                  <span className="tnum text-sm font-medium text-steel-900">{s.noteNumber}</span>
-                  <span className="text-sm text-steel-600">
+                  <span className="tnum text-sm font-medium text-gray-900">{s.noteNumber}</span>
+                  <span className="text-sm text-gray-600">
                     {s.quantity} · {s.handlerName ?? "unassigned"}
                   </span>
                   <Chip tone={s.status === "DELIVERED" ? "neutral" : "quiet"}>{s.status}</Chip>

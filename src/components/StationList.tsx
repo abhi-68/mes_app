@@ -33,7 +33,7 @@ export function StationList({ stations }: { stations: StationBlock[] }) {
   }
 
   if (stations.length === 0) {
-    return <p className="text-sm text-steel-500">No stations are set up yet.</p>;
+    return <p className="text-sm text-gray-500">No stations are set up yet.</p>;
   }
 
   const lines = new Map<string, StationBlock[]>();
@@ -46,15 +46,13 @@ export function StationList({ stations }: { stations: StationBlock[] }) {
   const named = [...lines.keys()].some((k) => k !== "");
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {[...lines.entries()].map(([line, group]) => (
         <div key={line || "single"}>
           {named && line && (
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-steel-400">
-              {line}
-            </p>
+            <p className="mb-2 px-1 text-sm font-medium leading-6 text-gray-500">{line}</p>
           )}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {group.map((s) => {
               const total = s.running + s.waiting;
               return (
@@ -63,16 +61,18 @@ export function StationList({ stations }: { stations: StationBlock[] }) {
                   type="button"
                   disabled={pending}
                   onClick={() => open(s.id)}
-                  className="flex min-h-24 flex-col justify-between rounded-xl border border-steel-300 bg-white p-5 text-left transition-all hover:-translate-y-px hover:border-steel-400 hover:shadow-raised disabled:opacity-50"
+                  className="flex min-h-28 flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 text-left transition-[background-color,border-color,transform] duration-100 ease-out hover:border-gray-300 hover:bg-gray-50 active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100"
                 >
-                  <span className="text-lg font-semibold text-steel-900">{s.name}</span>
-                  <span className="mt-2 flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-950">{s.name}</span>
+                  <span className="mt-3 flex items-baseline gap-2">
                     {total === 0 ? (
-                      <span className="text-sm text-steel-400">Nothing here</span>
+                      <span className="text-sm text-gray-400">Nothing here</span>
                     ) : (
                       <>
-                        <span className="tnum text-2xl font-semibold text-navy-900">{total}</span>
-                        <span className="text-sm text-steel-500">
+                        <span className="tnum text-3xl font-semibold tracking-tight text-gray-950">
+                          {total}
+                        </span>
+                        <span className="text-sm text-gray-500">
                           job{total === 1 ? "" : "s"}
                           {s.running > 0 ? ` · ${s.running} running` : ""}
                         </span>

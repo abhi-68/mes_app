@@ -5,7 +5,7 @@ import { getCurrentUser, isManager } from "@/lib/session";
 import { effectiveSeconds } from "@/lib/reporting";
 import { prorate } from "@/lib/timesheets";
 import { TimesheetTable, type TimesheetRow } from "@/components/TimesheetTable";
-import { PageHeader, EmptyState, Panel } from "@/components/ui";
+import { PageHeader, EmptyState } from "@/components/ui";
 
 export default async function TimesheetsPage() {
   const user = await getCurrentUser();
@@ -61,46 +61,17 @@ export default async function TimesheetsPage() {
       };
     });
 
-  const sharedCount = rows.filter((r) => r.sharedWith > 1).length;
-
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-9">
-      <PageHeader
-        title="Timesheets"
-        subtitle={
-          manager
-            ? "Recorded automatically from Start to Mark done. You can correct an entry, but the original is kept and your name goes on the change."
-            : "Your recorded time. These are captured automatically and cannot be edited — ask a supervisor if something is wrong."
-        }
-      />
+      <PageHeader title="Timesheets" />
 
       <div className="mt-6">
         {rows.length === 0 ? (
-          <EmptyState
-            title="No completed time entries yet"
-            hint="An entry is created when someone starts a step and closed when they mark it done."
-          />
+          <EmptyState title="No completed time entries yet" />
         ) : (
           <TimesheetTable rows={rows} canAdjust={manager} />
         )}
       </div>
-
-      <Panel className="mt-6 space-y-3 px-5 py-4">
-        <p className="text-sm text-steel-500">
-          Time entries are append-only. A correction never overwrites what was recorded — it is
-          stored as a separate row naming who changed it, what it was before, what it became and
-          why, so the original is always recoverable.
-        </p>
-        <p className="text-sm text-steel-500">
-          <span className="font-medium text-steel-700">On the clock</span> is how long the step
-          was open. <span className="font-medium text-steel-700">Charged to the job</span> shares
-          that time out when someone had more than one step running at once — an hour minding
-          three machines is an hour of work, not three.
-          {sharedCount > 0
-            ? ` ${sharedCount} ${sharedCount === 1 ? "entry" : "entries"} below ${sharedCount === 1 ? "was" : "were"} shared this way.`
-            : " Nothing below overlapped, so the two columns match."}
-        </p>
-      </Panel>
     </div>
   );
 }

@@ -110,14 +110,16 @@ test("closed orders and sub-assembly demand cannot reserve stock", async () => {
   assert.equal((await reserve()).ok, false);
   assert.equal((await balance()).activeReserved, 0);
 });
-test("start keeps the planned reservation and draws nothing, however often it is tapped", async () => {
-  // The planner's reservation is a commitment, not a withdrawal. Start no longer
-  // turns it into one — the handler does that by scanning the batch they lift.
+test("a planner's reservation is a commitment, not a collection", async () => {
+  // Reserving earmarks stock against the step. It does not put it in anyone's
+  // hands, so the step still will not start until somebody scans what they lifted.
   await receive(20);
   assert.equal((await reserve()).ok, true);
-  const key = randomUUID();
-  assert.equal((await startTask(taskId, key)).ok, true);
-  assert.equal((await startTask(taskId, key)).ok, true);
+
+  const res = await startTask(taskId, randomUUID());
+  assert.equal(res.ok, false);
+  if (!res.ok) assert.match(res.error, /Collect the material first/);
+
   assert.equal((await balance()).onHand, 20, "still on the shelf");
-  assert.equal((await balance()).activeReserved, 10, "still committed, not consumed");
+  assert.equal((await balance()).activeReserved, 10, "and still committed to this step");
 });

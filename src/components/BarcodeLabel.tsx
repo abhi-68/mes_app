@@ -40,13 +40,13 @@ export function BarcodeLabel({
       className={
         compact
           ? "inline-block"
-          : "inline-block break-inside-avoid rounded-lg border border-steel-300 bg-white p-4 print:border-black"
+          : "inline-block break-inside-avoid rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 p-4 print:border-black"
       }
     >
       {!compact && itemName && (
         <div className="mb-2">
-          <p className="text-sm font-semibold leading-tight text-steel-900">{itemName}</p>
-          <p className="tnum text-xs text-steel-500">
+          <p className="text-sm font-semibold leading-tight text-gray-900">{itemName}</p>
+          <p className="tnum text-xs text-gray-500">
             {sku}
             {heatNumber ? ` · heat ${heatNumber}` : ""}
           </p>
@@ -70,13 +70,13 @@ export function BarcodeLabel({
           ))}
         </svg>
       ) : (
-        <p className="text-xs text-blocked-fg">
+        <p className="text-xs text-danger-700">
           {code ? `“${code}” cannot be encoded — use letters, digits and punctuation` : "No code"}
         </p>
       )}
 
       <p
-        className={`tnum text-center font-mono tracking-wider text-steel-900 ${
+        className={`tnum text-center font-mono tracking-wider text-gray-900 ${
           compact ? "text-[10px]" : "mt-1 text-sm"
         }`}
       >
@@ -84,7 +84,7 @@ export function BarcodeLabel({
       </p>
 
       {!compact && (quantity !== undefined || storageLocation) && (
-        <p className="tnum mt-1 text-center text-xs text-steel-500">
+        <p className="tnum mt-1 text-center text-xs text-gray-500">
           {quantity !== undefined ? `${quantity} ${unit ?? ""}`.trim() : ""}
           {quantity !== undefined && storageLocation ? " · " : ""}
           {storageLocation ?? ""}

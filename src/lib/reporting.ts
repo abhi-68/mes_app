@@ -1,5 +1,13 @@
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { qualityEvents } from "@/db/schema";
+import {
+  customers,
+  deliveryNotes,
+  items,
+  materialRequirements,
+  qualityEvents,
+  workOrders,
+} from "@/db/schema";
 import { prorate } from "@/lib/timesheets";
 
 export type AverageRow = {
@@ -193,6 +201,74 @@ export async function totalRecordedHours(): Promise<number> {
 export async function qualityEventCount(): Promise<number> {
   const rows = await db.select({ id: qualityEvents.id }).from(qualityEvents);
   return rows.length;
+}
+
+export type MaterialUsedRow = {
+  itemId: number;
+  name: string;
+  sku: string;
+  unit: string;
+  issued: number;
+  returned: number;
+  scrapped: number;
+  /** What was actually consumed: issued, less anything handed back or written off. */
+  used: number;
+};
+
+/**
+ * What the floor has actually consumed, from the movement ledger rather than from
+ * what the bills of materials said it would take. The gap between the two is the
+ * number worth knowing.
+ */
+export async function materialsUsed(): Promise<MaterialUsedRow[]> {
+  const rows = await db
+    .select({
+      itemId: items.id,
+      name: items.name,
+      sku: items.sku,
+      unit: items.unitOfMeasure,
+      issued: sql<number>`coalesce(sum(${materialRequirements.issuedQty}), 0)::int`,
+      returned: sql<number>`coalesce(sum(${materialRequirements.returnedQty}), 0)::int`,
+      scrapped: sql<number>`coalesce(sum(${materialRequirements.scrappedFromWipQty}), 0)::int`,
+    })
+    .from(materialRequirements)
+    .innerJoin(items, eq(materialRequirements.itemId, items.id))
+    .groupBy(items.id, items.name, items.sku, items.unitOfMeasure);
+
+  return rows
+    // A sheet written off at the bench did not go into the product. Counting it as
+    // used would say the job consumed more than it did and hide the waste.
+    .map((r) => ({ ...r, used: r.issued - r.returned - r.scrapped }))
+    .filter((r) => r.issued > 0)
+    .sort((a, b) => b.used - a.used);
+}
+
+export type DeliveredRow = {
+  orderNumber: string;
+  itemName: string;
+  customerName: string | null;
+  quantity: number;
+  status: string;
+  shippedAt: Date | null;
+};
+
+/** Units that have left the building, newest first. */
+export async function productsDelivered(): Promise<DeliveredRow[]> {
+  return db
+    .select({
+      orderNumber: workOrders.orderNumber,
+      itemName: items.name,
+      customerName: customers.name,
+      quantity: workOrders.quantity,
+      status: sql<string>`${workOrders.status}::text`,
+      shippedAt: deliveryNotes.deliveredAt,
+    })
+    .from(workOrders)
+    .innerJoin(items, eq(workOrders.itemId, items.id))
+    .leftJoin(customers, eq(workOrders.customerId, customers.id))
+    .leftJoin(deliveryNotes, eq(deliveryNotes.workOrderId, workOrders.id))
+    .where(inArray(workOrders.status, ["IN_TRANSIT", "SHIPPED"]))
+    .orderBy(desc(workOrders.id));
 }
 
 export { effectiveSeconds };

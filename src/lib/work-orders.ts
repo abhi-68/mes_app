@@ -77,7 +77,12 @@ export async function releaseWorkOrder(
           sequence: step.sequence,
           name: step.name,
           stationId: step.stationId,
-          expectedMinutes: step.expectedMinutes,
+          // A routing step is the time to build ONE. Twenty units is twenty times
+          // the work, and leaving it unscaled scheduled a 20-off order as if it
+          // were a one-off while its materials were already multiplied.
+          expectedMinutes:
+            step.expectedMinutes === null ? null : step.expectedMinutes * order.quantity,
+          instructions: step.instructions,
           jobNumber: jobNumbers[i],
           status: "PENDING" as const,
         }))
@@ -163,6 +168,8 @@ export async function releaseWorkOrder(
         itemId: line.componentItemId,
         customerId: order.customerId,
         quantity: line.quantity * order.quantity,
+        // The unit's promised date, for priority. NOT when this part is needed —
+        // that is derived, and shown on the job card instead of this.
         dueDate: order.dueDate,
         status: "RELEASED",
         parentWorkOrderId: workOrderId,

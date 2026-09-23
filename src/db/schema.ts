@@ -10,6 +10,7 @@ import {
   pgEnum,
   uniqueIndex,
   index,
+  customType,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -31,6 +32,10 @@ export const workOrderStatusEnum = pgEnum("work_order_status", [
   "RELEASED",
   "IN_PROGRESS",
   "DONE",
+  // Built and picked up, but not yet confirmed with the customer. DONE means the
+  // factory has finished; these two are about where the machine physically is.
+  "IN_TRANSIT",
+  "SHIPPED",
   "ON_HOLD",
   "CANCELLED",
 ]);
@@ -91,6 +96,19 @@ export const stations = pgTable("stations", {
    * the map, but ORD-0001-20 has to mean exactly one of them.
    */
   number: integer("number").notNull().default(0),
+  /**
+   * How many jobs can run here at once — benches, cells or machines.
+   *
+   * This is the only capacity the scheduler honours. People are assumed
+   * sufficient: one person per job, always someone available. That assumption is
+   * wrong in any real plant and is stated on the schedule screen rather than
+   * buried here, because a plan that silently assumes infinite labour is a plan
+   * that promises dates the floor cannot hit.
+   *
+   * Machines are also assumed interchangeable. If one cell cannot run a 12-row
+   * coil, this number is a lie and capability has to become part of the model.
+   */
+  capacity: integer("capacity").notNull().default(1),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -226,6 +244,22 @@ export const workOrders = pgTable(
       .references(() => items.id),
     customerId: integer("customer_id").references(() => customers.id),
     quantity: integer("quantity").notNull().default(1),
+    /**
+     * What was ordered, in the customer's words. Free text on purpose: every job is
+     * dimensioned differently, and a fixed set of columns would push the one
+     * measurement that matters on this order into a notes field nobody reads.
+     */
+    dimensions: varchar("dimensions", { length: 200 }),
+    materialType: varchar("material_type", { length: 120 }),
+    /**
+     * When the UNIT this belongs to is promised to the customer.
+     *
+     * A sub-assembly inherits it, which is right for priority — a frame for a job
+     * shipping Friday outranks one shipping next month — and wrong as a deadline.
+     * The frame is needed at final assembly days before the unit ships, and that
+     * date is DERIVED by the scheduler's backward pass, never stored: a copy would
+     * be stale the moment anything moved. See `neededBy` in lib/schedule-data.ts.
+     */
     dueDate: timestamp("due_date"),
     status: workOrderStatusEnum("status").notNull().default("PLANNED"),
 
@@ -267,6 +301,9 @@ export const workOrderTasks = pgTable(
     name: varchar("name", { length: 150 }).notNull(),
     stationId: integer("station_id").references(() => stations.id),
     expectedMinutes: integer("expected_minutes"),
+    /** Copied from the routing step at release, so editing the product later cannot
+        silently change what a job already on the floor was told to do. */
+    instructions: text("instructions"),
 
     /**
      * What the job is called on the floor: the order number and the station it
@@ -382,6 +419,17 @@ export const qualityEvents = pgTable("quality_events", {
   type: qualityEventTypeEnum("type").notNull(),
   quantity: integer("quantity").notNull().default(1),
   reasonCodeId: integer("reason_code_id").references(() => reasonCodes.id),
+  /**
+   * The MATERIAL that was found bad, when it was material rather than the work.
+   *
+   * Null means the event is about what this step produced. Set means the operator
+   * opened a box and the contents were unusable — a different fault, with a
+   * different owner, and the reason it is worth telling apart: the lot below names
+   * the heat it came from, so "which heats do we keep rejecting" becomes a question
+   * with an answer.
+   */
+  itemId: integer("item_id").references(() => items.id),
+  lotId: integer("lot_id").references((): AnyPgColumn => stockLots.id),
   notes: text("notes"),
   recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -398,19 +446,50 @@ export const qualityEvents = pgTable("quality_events", {
 
 // ---------------------------------------------------------------------------
 // Attachments (drawings / work instructions at the station)
+//
+// The bytes live in Postgres. Not because that is where files belong — it is
+// not, past a few megabytes — but because the alternative on a hosted demo is a
+// local folder that is wiped on every deploy, and a drawing that vanishes when
+// the app restarts is worse than no drawing at all. `storagePath` stays for the
+// day this moves to an object store; exactly one of the two is ever set.
 // ---------------------------------------------------------------------------
-export const attachments = pgTable("attachments", {
-  id: serial("id").primaryKey(),
-  workOrderId: integer("work_order_id").references(() => workOrders.id),
-  workOrderTaskId: integer("work_order_task_id").references(() => workOrderTasks.id),
-  routingStepId: integer("routing_step_id").references(() => routingSteps.id),
-  fileName: varchar("file_name", { length: 300 }).notNull(),
-  mimeType: varchar("mime_type", { length: 120 }),
-  storagePath: text("storage_path").notNull(),
-  revision: varchar("revision", { length: 40 }),
-  uploadedByUserId: integer("uploaded_by_user_id").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+
+/** Postgres `bytea`. Drizzle has no built-in for it. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
 });
+
+export const attachments = pgTable(
+  "attachments",
+  {
+    id: serial("id").primaryKey(),
+    workOrderId: integer("work_order_id").references(() => workOrders.id),
+    workOrderTaskId: integer("work_order_task_id").references(() => workOrderTasks.id),
+    routingStepId: integer("routing_step_id").references(() => routingSteps.id),
+    /** What it is, in the engineer's words: "GA drawing", "Coil schedule". */
+    title: varchar("title", { length: 200 }),
+    fileName: varchar("file_name", { length: 300 }).notNull(),
+    mimeType: varchar("mime_type", { length: 120 }),
+    content: bytea("content"),
+    storagePath: text("storage_path"),
+    sizeBytes: integer("size_bytes").notNull().default(0),
+    /**
+     * The revision the shop is building to.
+     *
+     * Free text because it comes off the title block, and a drawing office's
+     * scheme is theirs. Shown next to the file everywhere, because the failure
+     * this guards against is somebody fabricating to rev B while rev C is on
+     * the server.
+     */
+    revision: varchar("revision", { length: 40 }),
+    uploadedByUserId: integer("uploaded_by_user_id").references(() => users.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("attachments_order_idx").on(t.workOrderId),
+    index("attachments_task_idx").on(t.workOrderTaskId),
+  ]
+);
 
 // ---------------------------------------------------------------------------
 // API keys (future vision / sensor integrations post events through this)

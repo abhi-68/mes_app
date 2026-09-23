@@ -149,7 +149,7 @@ export function ScanInput({
   return (
     <div>
       <label className="block">
-        <span className="text-xs text-steel-500">{label}</span>
+        <span className="text-xs text-gray-500">{label}</span>
         <div className="mt-1 flex flex-wrap gap-2">
           <input
             ref={inputRef}
@@ -165,7 +165,7 @@ export function ScanInput({
               }
             }}
             placeholder={placeholder}
-            className="min-h-11 min-w-56 flex-1 rounded-md border border-steel-300 bg-white px-3 font-mono text-sm"
+            className="min-h-11 min-w-56 flex-1 rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3 font-mono text-sm"
             autoComplete="off"
             spellCheck={false}
           />
@@ -188,7 +188,7 @@ export function ScanInput({
       </label>
 
       {cameraOn && (
-        <div className="mt-3 overflow-hidden rounded-lg border border-steel-300 bg-navy-950">
+        <div className="mt-3 overflow-hidden rounded-lg ring-1 ring-inset ring-gray-300 bg-gray-950">
           <video ref={videoRef} playsInline muted className="block max-h-64 w-full object-cover" />
           <p className="px-3 py-2 text-xs text-white/70">
             Hold the label steady in frame. It reads on its own — there is no shutter.
@@ -196,7 +196,7 @@ export function ScanInput({
         </div>
       )}
 
-      {cameraError && <p className="mt-2 text-sm text-blocked-fg">{cameraError}</p>}
+      {cameraError && <p className="mt-2 text-sm text-danger-700">{cameraError}</p>}
 
 
     </div>

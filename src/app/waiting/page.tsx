@@ -51,7 +51,7 @@ export default async function WaitingPage() {
       <PageHeader
         eyebrow="Floor status"
         title="What's waiting"
-        subtitle="Every step that cannot start right now, and the thing it is waiting on. None of it is typed in by hand — it is derived from dependencies and stock."
+        subtitle={undefined}
       />
 
       <div className="mt-7 grid gap-4 sm:grid-cols-3">
@@ -74,14 +74,14 @@ export default async function WaitingPage() {
         <div className="mt-8">
           <EmptyState
             title="Nothing is held up"
-            hint="Every step that could be running has its parts. Anything still queued is simply waiting its turn in its own routing."
+
           />
         </div>
       )}
 
       {onWork.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="Someone has to finish something else first">
+          <SectionHeading>
             Waiting on another part of the build
           </SectionHeading>
           <WaitingTable rows={onWork} />
@@ -90,7 +90,7 @@ export default async function WaitingPage() {
 
       {onMaterial.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="Buy it, or pull it from another order">
+          <SectionHeading>
             Waiting on material
           </SectionHeading>
           <WaitingTable rows={onMaterial} />
@@ -99,15 +99,13 @@ export default async function WaitingPage() {
 
       {queued.length > 0 && (
         <section className="mt-10">
-          <SectionHeading note="Normal flow — shown for completeness">
+          <SectionHeading>
             Queued behind an earlier step
           </SectionHeading>
           <Panel className="px-5 py-4">
-            <p className="text-sm text-steel-500">
-              {queued.length} step{queued.length === 1 ? " is" : "s are"} simply waiting
-              {queued.length === 1 ? " its" : " their"} turn in{" "}
-              {queued.length === 1 ? "its" : "their"} own routing. They need nothing from anyone
-              else.
+            <p className="text-sm text-gray-500">
+              {queued.length} step{queued.length === 1 ? "" : "s"} waiting{" "}
+              {queued.length === 1 ? "its" : "their"} turn.
             </p>
           </Panel>
         </section>
@@ -127,8 +125,8 @@ function WaitingTable({ rows }: { rows: WaitingOperation[] }) {
             <col className="w-[44%]" />
             <col className="w-[14%]" />
           </colgroup>
-          <thead className="bg-steel-50/60">
-            <tr className="border-b border-steel-200">
+          <thead className="bg-gray-50/60">
+            <tr className="border-b border-gray-200">
               <th className={TH}>Step</th>
               <th className={TH}>Unit</th>
               <th className={TH}>Waiting on</th>
@@ -139,18 +137,18 @@ function WaitingTable({ rows }: { rows: WaitingOperation[] }) {
             {rows.map((r) => (
               <tr key={r.operationId} className={TR}>
                 <td className={TD}>
-                  <p className="font-medium text-steel-900">{r.operationName}</p>
-                  <p className="mt-0.5 text-xs text-steel-400">{r.stationName ?? "Unassigned"}</p>
+                  <p className="font-medium text-gray-900">{r.operationName}</p>
+                  <p className="mt-0.5 text-xs text-gray-400">{r.stationName ?? "Unassigned"}</p>
                 </td>
                 <td className={TD}>
                   <Link
                     href={`/orders/${r.workOrderId}`}
                     title={r.itemName}
-                    className="flex min-h-11 items-center truncate text-steel-700 underline-offset-2 hover:text-navy-800 hover:underline"
+                    className="flex min-h-11 items-center truncate text-gray-700 underline-offset-2 hover:text-primary-600 hover:underline"
                   >
                     {r.itemName}
                   </Link>
-                  <p className="tnum mt-0.5 text-xs text-steel-400">
+                  <p className="tnum mt-0.5 text-xs text-gray-400">
                     {r.orderNumber}
                     {r.level > 0 && <span className="ml-1.5">sub-assembly</span>}
                   </p>
@@ -160,12 +158,12 @@ function WaitingTable({ rows }: { rows: WaitingOperation[] }) {
                     {r.blockers.map((b, i) => (
                       <li key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                         <Chip tone={b.kind === "SEQUENCE" ? "quiet" : "alert"}>{b.label}</Chip>
-                        <span className="text-steel-600">{b.detail}</span>
+                        <span className="text-gray-600">{b.detail}</span>
                       </li>
                     ))}
                   </ul>
                 </td>
-                <td className={`${TD} whitespace-nowrap text-right text-steel-500`}>
+                <td className={`${TD} whitespace-nowrap text-right text-gray-500`}>
                   {formatRelativeDue(r.dueDate)}
                 </td>
               </tr>

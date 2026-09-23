@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { receiveDelivery } from "@/app/actions/admin";
 import { Button, Panel } from "@/components/ui";
 import { BarcodeLabel } from "@/components/BarcodeLabel";
@@ -56,7 +57,7 @@ export function ReceiveForm({
           Book a delivery in
         </Button>
         {lastLabel && (
-          <span className="text-sm text-steel-500">
+          <span className="text-sm text-gray-500">
             Last received: <span className="tnum font-medium">{lastLabel.code}</span>
           </span>
         )}
@@ -66,10 +67,9 @@ export function ReceiveForm({
 
   return (
     <Panel className="px-5 py-4">
-      <p className="text-sm font-medium text-steel-700">Book a delivery in</p>
-      <p className="mt-1 text-xs text-steel-500">
-        Record the heat number now. Once the pallet is unwrapped and the certificate is
-        filed, this batch can never be tied back to its mill test again.
+      <p className="text-sm font-medium text-gray-700">Book a delivery in</p>
+      <p className="mt-1 text-xs text-gray-500">
+        Record the heat number now — once the certificate is filed it cannot be tied back.
       </p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -85,6 +85,12 @@ export function ReceiveForm({
               </option>
             ))}
           </select>
+          <Link
+            href="/admin/products"
+            className="mt-1 inline-block text-xs text-gray-500 underline"
+          >
+            Not on the list? Add it
+          </Link>
         </Field>
 
         <Field label={`Quantity${item ? ` (${item.unit})` : ""}`}>
@@ -163,7 +169,7 @@ export function ReceiveForm({
         </Field>
       </div>
 
-      {error && <p className="mt-3 text-sm text-blocked-fg">{error}</p>}
+      {error && <p className="mt-3 text-sm text-danger-700">{error}</p>}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
@@ -208,12 +214,8 @@ export function ReceiveForm({
       </div>
 
       {lastLabel && (
-        <div className="mt-5 border-t border-steel-200 pt-4">
-          <p className="text-sm font-medium text-steel-700">Label for the pallet</p>
-          <p className="mt-1 text-xs text-steel-500">
-            Print this and put it on the stock now. A lot with no label is a lot nobody can
-            scan, and the trace stops there.
-          </p>
+        <div className="mt-5 border-t border-gray-200 pt-4">
+          <p className="text-sm font-medium text-gray-700">Label for the pallet</p>
           <div className="mt-3 flex flex-wrap items-start gap-4">
             <BarcodeLabel
               code={lastLabel.code}
@@ -234,13 +236,13 @@ export function ReceiveForm({
 }
 
 const inputClass =
-  "mt-1 min-h-11 w-full rounded-md border border-steel-300 bg-white px-3 text-sm";
+  "mt-1 min-h-11 w-full rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3 text-sm";
 const selectClass = inputClass;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs text-steel-500">{label}</span>
+      <span className="text-xs text-gray-500">{label}</span>
       {children}
     </label>
   );

@@ -52,18 +52,18 @@ export default async function AdminPage() {
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-9">
       <PageHeader
         title="Setup"
-        subtitle="Everything here is configuration — you can add a new product, a new process or a new station without anyone writing code."
+        subtitle="Products, people, stations and reason codes."
       />
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {SECTIONS.map((s) => (
-          <Panel key={s.href} className="transition-colors hover:border-steel-300">
+          <Panel key={s.href} className="transition-colors hover:ring-gray-300">
             <Link href={s.href} className="block px-5 py-5">
               <div className="flex items-baseline justify-between gap-3">
-                <h2 className="font-medium text-navy-900">{s.title}</h2>
-                <span className="text-sm tabular-nums text-steel-400">{counts[s.href]}</span>
+                <h2 className="font-medium text-gray-950">{s.title}</h2>
+                <span className="text-sm tabular-nums text-gray-400">{counts[s.href]}</span>
               </div>
-              <p className="mt-2 text-sm text-steel-500">{s.body}</p>
+              <p className="mt-2 text-sm text-gray-500">{s.body}</p>
             </Link>
           </Panel>
         ))}

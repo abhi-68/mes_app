@@ -14,32 +14,69 @@ export type OrderStatus =
   | "ON_HOLD"
   | "CANCELLED";
 
+/*
+  The state scale a fitter already knows, applied consistently everywhere:
+
+    red    stopped   BLOCKED, ON_HOLD
+    amber  waiting   PENDING, RELEASED \u2014 could be running and is not
+    green  running   IN_PROGRESS, and only that
+    blue   moving    IN_TRANSIT
+    grey   inactive  PLANNED, DONE, SHIPPED, CANCELLED
+
+  Done is deliberately GREY rather than green. On a floor board green has to mean
+  "producing right now"; a finished job is not producing, and two greens meaning
+  different things is how a glance stops being trustworthy.
+*/
 const STATUS_STYLE: Record<string, { bg: string; fg: string; dot: string; label: string }> = {
-  PENDING: { bg: "bg-idle-bg", fg: "text-idle-fg", dot: "bg-idle-solid", label: "Not started" },
-  PLANNED: { bg: "bg-idle-bg", fg: "text-idle-fg", dot: "bg-idle-solid", label: "Planned" },
-  RELEASED: { bg: "bg-idle-bg", fg: "text-idle-fg", dot: "bg-idle-solid", label: "Ready to start" },
-  IN_PROGRESS: {
-    bg: "bg-active-bg",
-    fg: "text-active-fg",
-    dot: "bg-active-solid",
-    label: "In progress",
+  PLANNED: { bg: "bg-gray-100", fg: "text-gray-600", dot: "bg-gray-400", label: "Planned" },
+  PENDING: {
+    bg: "bg-warning-50",
+    fg: "text-warning-700",
+    dot: "bg-warning-500",
+    label: "Not started",
   },
-  DONE: { bg: "bg-ok-bg", fg: "text-ok-fg", dot: "bg-ok-solid", label: "Done" },
-  BLOCKED: { bg: "bg-blocked-bg", fg: "text-blocked-fg", dot: "bg-blocked-solid", label: "Blocked" },
-  ON_HOLD: { bg: "bg-blocked-bg", fg: "text-blocked-fg", dot: "bg-blocked-solid", label: "On hold" },
-  CANCELLED: { bg: "bg-idle-bg", fg: "text-idle-fg", dot: "bg-idle-solid", label: "Cancelled" },
+  RELEASED: {
+    bg: "bg-warning-50",
+    fg: "text-warning-700",
+    dot: "bg-warning-500",
+    label: "Ready to start",
+  },
+  IN_PROGRESS: {
+    bg: "bg-success-50",
+    fg: "text-success-700",
+    dot: "bg-success-600",
+    label: "Running",
+  },
+  DONE: { bg: "bg-gray-100", fg: "text-gray-600", dot: "bg-gray-400", label: "Done" },
+  IN_TRANSIT: {
+    bg: "bg-info-50",
+    fg: "text-info-700",
+    dot: "bg-info-500",
+    label: "In transit",
+  },
+  SHIPPED: { bg: "bg-gray-100", fg: "text-gray-600", dot: "bg-gray-400", label: "Shipped" },
+  BLOCKED: { bg: "bg-danger-50", fg: "text-danger-700", dot: "bg-danger-600", label: "Stopped" },
+  ON_HOLD: { bg: "bg-danger-50", fg: "text-danger-700", dot: "bg-danger-600", label: "On hold" },
+  CANCELLED: { bg: "bg-gray-100", fg: "text-gray-600", dot: "bg-gray-400", label: "Cancelled" },
 };
 
 export function statusLabel(status: string): string {
   return STATUS_STYLE[status]?.label ?? status;
 }
 
+/**
+ * Filament's badge: a squared-off tag, not a pill.
+ *
+ * The dot is kept. Filament badges take an icon slot, so it is within the idiom,
+ * and it is the only thing stopping status from being carried by hue alone —
+ * which a colour-blind operator cannot read.
+ */
 export function StatusPill({ status, size = "md" }: { status: string; size?: "sm" | "md" }) {
   const s = STATUS_STYLE[status] ?? STATUS_STYLE.PENDING;
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-medium ring-1 ring-inset ring-current/10 ${s.bg} ${s.fg} ${
-        size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs"
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg font-medium ring-1 ring-inset ring-current/20 ${s.bg} ${s.fg} ${
+        size === "sm" ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-xs"
       }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} aria-hidden />
@@ -65,18 +102,18 @@ export function ProgressBar({
   const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
   const fill =
     tone === "ok" || (tone === "auto" && pct === 100)
-      ? "bg-ok-solid"
+      ? "bg-success-600"
       : tone === "blocked"
-        ? "bg-blocked-solid"
+        ? "bg-danger-600"
         : tone === "navy"
-          ? "bg-navy-800"
+          ? "bg-primary-600"
           : pct === 0
-            ? "bg-idle-solid"
-            : "bg-active-solid";
+            ? "bg-gray-400"
+            : "bg-warning-500";
 
   return (
     <div
-      className={`h-1.5 overflow-hidden rounded-full bg-steel-200/80 ${className}`}
+      className={`h-1.5 overflow-hidden rounded-full bg-gray-200/80 ${className}`}
       role="progressbar"
       aria-valuenow={pct}
       aria-valuemin={0}
@@ -99,19 +136,21 @@ export function Panel({
   className = "",
   as: As = "div",
   interactive = false,
+  ...rest
 }: {
   children: ReactNode;
   className?: string;
   as?: "div" | "section";
   /** Adds a hover lift. Only for a surface that is itself a link or a button. */
   interactive?: boolean;
-}) {
+} & Record<`data-${string}`, string | undefined>) {
+  /* One card treatment: white, a hairline border, and no shadow to speak of.
+     Definition comes from the border so stacked surfaces stay quiet. */
   return (
     <As
-      className={`rounded-xl border border-steel-200/80 bg-white shadow-card ${
-        interactive
-          ? "transition-all duration-150 hover:-translate-y-px hover:border-steel-300 hover:shadow-raised"
-          : ""
+      {...rest}
+      className={`rounded-lg border border-gray-200 bg-white ${
+        interactive ? "transition duration-75 hover:border-gray-300 hover:bg-gray-50" : ""
       } ${className}`}
     >
       {children}
@@ -131,15 +170,15 @@ export function PageHeader({
   /** A short label above the title, for orientation on a deep page. */
   eyebrow?: ReactNode;
 }) {
+  /* Small and tight. A shop screen is read at a glance from a metre away, and the
+     thing that has to be big is the STATE, not the word "Floor map". */
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-steel-200 pb-6">
+    <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}
-        <h1 className="text-[1.75rem] font-semibold leading-tight text-navy-900">{title}</h1>
+        {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
+        <h1 className="text-lg font-semibold tracking-tight text-gray-900">{title}</h1>
         {subtitle && (
-          <div className="mt-2 max-w-2xl text-[0.9375rem] leading-relaxed text-steel-500">
-            {subtitle}
-          </div>
+          <div className="mt-1 max-w-2xl text-[13px] leading-relaxed text-gray-500">{subtitle}</div>
         )}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -155,19 +194,19 @@ export function SectionHeading({
   note?: ReactNode;
 }) {
   return (
-    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-      <h2 className="text-[0.9375rem] font-semibold text-navy-900">{children}</h2>
-      {note && <span className="text-xs text-steel-400">{note}</span>}
+    <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <h2 className="text-[13px] font-semibold leading-5 text-gray-900">{children}</h2>
+      {note && <span className="text-[13px] text-gray-500">{note}</span>}
     </div>
   );
 }
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-steel-300 bg-white/60 px-6 py-12 text-center">
-      <p className="text-[0.9375rem] font-medium text-steel-600">{title}</p>
+    <div className="rounded-lg border border-gray-200 bg-white px-6 py-12 text-center">
+      <p className="text-base font-semibold text-gray-950">{title}</p>
       {hint && (
-        <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-steel-400">{hint}</p>
+        <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-gray-500">{hint}</p>
       )}
     </div>
   );
@@ -179,14 +218,15 @@ export function EmptyState({ title, hint }: { title: string; hint?: string }) {
 
 type ButtonTone = "primary" | "secondary" | "danger" | "ghost";
 
+/* The primary action is near-black, not a colour. Colour on a button competes
+   with colour that means a machine has stopped, and the machine has to win. */
 const BUTTON_TONE: Record<ButtonTone, string> = {
   primary:
-    "bg-navy-800 text-white shadow-card hover:bg-navy-900 active:translate-y-px disabled:bg-steel-300 disabled:shadow-none",
+    "bg-gray-900 text-white hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400",
   secondary:
-    "border border-steel-300 bg-white text-steel-700 shadow-card hover:border-steel-400 hover:bg-steel-50 active:translate-y-px disabled:text-steel-400 disabled:shadow-none",
-  danger:
-    "bg-blocked-solid text-white shadow-card hover:brightness-95 active:translate-y-px disabled:bg-steel-300 disabled:shadow-none",
-  ghost: "text-steel-600 hover:bg-steel-100 active:translate-y-px",
+    "bg-white text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:text-gray-400",
+  danger: "bg-danger-600 text-white hover:bg-danger-700 disabled:bg-gray-200 disabled:text-gray-400",
+  ghost: "text-gray-600 hover:bg-gray-100",
 };
 
 export function Button({
@@ -224,7 +264,7 @@ export function Button({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-100 disabled:cursor-not-allowed ${BUTTON_TONE[tone]} ${sizing} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-[background-color,border-color,color,transform] duration-100 ease-out active:scale-[0.985] disabled:cursor-not-allowed disabled:active:scale-100 ${BUTTON_TONE[tone]} ${sizing} ${className}`}
     >
       {children}
     </button>
@@ -257,7 +297,7 @@ export function LinkButton({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-100 ${BUTTON_TONE[tone]} ${sizing}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-[background-color,border-color,color,transform] duration-100 ease-out active:scale-[0.985] ${BUTTON_TONE[tone]} ${sizing}`}
     >
       {children}
     </Link>
@@ -284,17 +324,15 @@ export function Stat({
   tone?: "default" | "alert" | "muted";
 }) {
   const valueTone =
-    tone === "alert" ? "text-blocked-fg" : tone === "muted" ? "text-steel-400" : "text-navy-900";
+    tone === "alert" ? "text-danger-600" : tone === "muted" ? "text-gray-400" : "text-gray-950";
   return (
-    <Panel className="relative overflow-hidden px-5 py-4">
+    <Panel className="relative overflow-hidden px-4 py-3.5">
       {tone === "alert" && (
-        <span className="absolute inset-y-0 left-0 w-0.5 bg-blocked-solid" aria-hidden />
+        <span className="absolute inset-y-0 left-0 w-0.5 bg-danger-600" aria-hidden />
       )}
-      <p className="eyebrow">{label}</p>
-      <p className={`tnum mt-1.5 text-[1.75rem] font-semibold leading-none ${valueTone}`}>
-        {value}
-      </p>
-      {note && <p className="mt-1.5 text-xs text-steel-400">{note}</p>}
+      <p className="text-[13px] text-gray-500">{label}</p>
+      <p className={`tnum mt-0.5 text-2xl font-semibold tracking-tight ${valueTone}`}>{value}</p>
+      {note && <p className="mt-0.5 text-xs text-gray-400">{note}</p>}
     </Panel>
   );
 }
@@ -308,13 +346,13 @@ export function Chip({
   tone?: "neutral" | "alert" | "quiet";
 }) {
   const tones = {
-    neutral: "bg-steel-100 text-steel-600",
-    alert: "bg-blocked-bg text-blocked-fg",
-    quiet: "bg-steel-100 text-steel-500",
+    neutral: "bg-gray-50 text-gray-600 ring-gray-500/10",
+    alert: "bg-danger-50 text-danger-700 ring-danger-600/10",
+    quiet: "bg-gray-50 text-gray-500 ring-gray-500/10",
   } as const;
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${tones[tone]}`}
+      className={`inline-flex shrink-0 items-center rounded-lg px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${tones[tone]}`}
     >
       {children}
     </span>
@@ -353,18 +391,18 @@ export function SearchBox({
         defaultValue={value ?? ""}
         placeholder={placeholder}
         aria-label={label}
-        className="min-h-11 min-w-56 flex-1 rounded-md border border-steel-300 bg-white px-3 text-sm"
+        className="min-h-11 min-w-56 flex-1 rounded-lg border-0 bg-white px-3 text-sm text-gray-950 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600"
       />
       <button
         type="submit"
-        className="inline-flex min-h-11 items-center rounded-md bg-navy-800 px-4 text-sm font-medium text-white transition-colors hover:bg-navy-900"
+        className="inline-flex min-h-9 items-center rounded-md bg-gray-900 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-800"
       >
         {label}
       </button>
       {value ? (
         <a
           href={action}
-          className="inline-flex min-h-11 items-center rounded-md border border-steel-300 bg-white px-4 text-sm text-steel-600 hover:bg-steel-50"
+          className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Clear
         </a>
@@ -375,9 +413,9 @@ export function SearchBox({
 
 /** Shared table chrome, so every table on the site has the same rhythm. */
 export const TH =
-  "px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-steel-400";
-export const TD = "px-4 py-3 align-top text-sm";
-export const TR = "border-b border-steel-100 last:border-0 transition-colors hover:bg-steel-50/70";
+  "px-4 py-3 text-left text-sm font-semibold text-gray-950 bg-gray-50";
+export const TD = "px-4 py-4 align-top text-sm text-gray-700";
+export const TR = "border-t border-gray-200 transition duration-75 hover:bg-gray-50";
 
 /* ------------------------------------------------------------------ */
 /* Formatting helpers                                                  */

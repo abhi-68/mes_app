@@ -41,7 +41,7 @@ export default async function ProductSetupPage(props: PageProps<"/admin/products
         title={item.name}
         subtitle={`${item.sku} · ${item.procurementType === "MANUFACTURED" ? "made here" : "bought in"}`}
         actions={
-          <Link href="/admin/products" className="text-sm text-steel-500 hover:text-navy-900">
+          <Link href="/admin/products" className="text-sm text-gray-500 hover:text-gray-950">
             All products
           </Link>
         }
@@ -57,13 +57,14 @@ export default async function ProductSetupPage(props: PageProps<"/admin/products
             name: s.name,
             stationName: s.station?.name ?? null,
             expectedMinutes: s.expectedMinutes,
+            instructions: s.instructions,
           }))}
           stations={stationRows}
         />
       </section>
 
       <section className="mt-10">
-        <SectionHeading note="Each line says when stock is taken">Built from</SectionHeading>
+        <SectionHeading>Built from</SectionHeading>
         <BomEditor
           parentItemId={itemId}
           lines={lines.map((l) => ({

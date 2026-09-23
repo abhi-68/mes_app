@@ -52,11 +52,8 @@ export function WorkerHomeScreen({
       <PageHeader
         eyebrow={data.stationName ?? "No station set"}
         title={`Hello, ${firstName}`}
-        subtitle={
-          data.stationName
-            ? "Everything below is yours or at your station. Open a step to start it."
-            : "You have not been put on a station yet, so nothing is queued for you. Ask an admin to set one."
-        }
+        /* Kept: not knowing you have no station is the one thing worth saying here. */
+        subtitle={data.stationName ? undefined : "Ask an admin to put you on a station."}
       />
 
       {/* --- what I am on right now ------------------------------------- */}
@@ -71,10 +68,9 @@ export function WorkerHomeScreen({
             ))}
           </div>
           {sharing && (
-            <p className="mt-2 text-xs text-steel-500">
-              An hour on the clock counts as{" "}
-              {formatMinutes(Math.round(60 / data.running.length))} against each of these. Clock
-              off anything you are not really on.
+            <p className="mt-2 text-xs text-gray-500">
+              An hour counts as {formatMinutes(Math.round(60 / data.running.length))} against
+              each.
             </p>
           )}
           <div className="mt-3">
@@ -109,7 +105,7 @@ export function WorkerHomeScreen({
       {/* --- what I can pick up ------------------------------------------ */}
       {data.ready.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="Nobody's name on these — anyone at the station can take one">
+          <SectionHeading>
             Ready at {data.stationName ?? "your station"}
           </SectionHeading>
           <div className="space-y-3">
@@ -118,7 +114,7 @@ export function WorkerHomeScreen({
             ))}
           </div>
           {data.ready.length > 5 && (
-            <p className="mt-2 text-xs text-steel-400">
+            <p className="mt-2 text-xs text-gray-400">
               and {data.ready.length - 5} more on{" "}
               <Link href="/my-station" className="underline">
                 My work
@@ -139,14 +135,14 @@ export function WorkerHomeScreen({
       {/* --- good news --------------------------------------------------- */}
       {goodNews.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="What you were waiting on has arrived">
+          <SectionHeading>
             You can get on with {goodNews.length === 1 ? "this" : "these"}
           </SectionHeading>
-          <Panel className="divide-y divide-steel-100 overflow-hidden border-l-2 border-l-ok-solid">
+          <Panel className="divide-y divide-gray-100 overflow-hidden border-l-2 border-l-success-600">
             {goodNews.slice(0, 4).map((a) => (
               <div key={a.key} className="px-5 py-3.5">
-                <p className="text-sm font-medium text-steel-900">{a.title}</p>
-                {a.detail && <p className="mt-0.5 text-xs text-steel-500">{a.detail}</p>}
+                <p className="text-sm font-medium text-gray-900">{a.title}</p>
+                {a.detail && <p className="mt-0.5 text-xs text-gray-500">{a.detail}</p>}
               </div>
             ))}
           </Panel>
@@ -156,18 +152,18 @@ export function WorkerHomeScreen({
       {/* --- what is stuck, and why -------------------------------------- */}
       {(data.blockedHere.length > 0 || data.waiting.length > 0) && (
         <section className="mt-8">
-          <SectionHeading note="Nothing for you to do on these yet">
+          <SectionHeading>
             Not ready
           </SectionHeading>
-          <Panel className="divide-y divide-steel-100 overflow-hidden">
+          <Panel className="divide-y divide-gray-100 overflow-hidden">
             {data.blockedHere.map((s) => (
               <div key={s.id} className="px-5 py-3.5">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <Chip tone="alert">Flagged</Chip>
-                  <p className="text-sm font-medium text-steel-900">{s.name}</p>
-                  <span className="tnum text-xs text-steel-400">{s.orderNumber}</span>
+                  <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                  <span className="tnum text-xs text-gray-400">{s.orderNumber}</span>
                 </div>
-                <p className="mt-1 text-xs text-blocked-fg">
+                <p className="mt-1 text-xs text-danger-700">
                   {s.blockers[0]?.detail ?? "A supervisor has been told."}
                 </p>
               </div>
@@ -176,19 +172,15 @@ export function WorkerHomeScreen({
               <div key={s.id} className="px-5 py-3.5">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <Chip tone="quiet">{s.blockers[0]?.label ?? "Waiting"}</Chip>
-                  <p className="text-sm font-medium text-steel-900">{s.name}</p>
-                  <span className="tnum text-xs text-steel-400">{s.orderNumber}</span>
+                  <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                  <span className="tnum text-xs text-gray-400">{s.orderNumber}</span>
                 </div>
-                <p className="mt-1 text-xs text-steel-500">
+                <p className="mt-1 text-xs text-gray-500">
                   {s.blockers[0]?.detail ?? "Waiting its turn."}
                 </p>
               </div>
             ))}
           </Panel>
-          <p className="mt-2 text-xs text-steel-400">
-            You will be told here the moment one of these can start — you do not need to keep
-            checking.
-          </p>
         </section>
       )}
 
@@ -205,15 +197,20 @@ export function WorkerHomeScreen({
         </div>
       )}
 
-      <Panel className="mt-9 px-5 py-4">
-        <p className="text-sm text-steel-500">
-          Looking for a different unit? Every order on the floor is on the{" "}
-          <Link href="/orders" className="font-medium text-navy-700 underline">
-            Orders
-          </Link>{" "}
-          page, whoever is building it.
-        </p>
-      </Panel>
+      <div className="mt-9 flex flex-wrap gap-2">
+        <Link
+          href="/my-station"
+          className="inline-flex min-h-9 items-center rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50"
+        >
+          My work
+        </Link>
+        <Link
+          href="/orders"
+          className="inline-flex min-h-9 items-center rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50"
+        >
+          All orders
+        </Link>
+      </div>
     </div>
   );
 }
@@ -221,10 +218,10 @@ export function WorkerHomeScreen({
 function StepRow({ step, tone }: { step: WorkerStep; tone: "running" | "mine" | "ready" }) {
   const border =
     tone === "running"
-      ? "border-l-active-solid"
+      ? "border-l-warning-500"
       : tone === "mine"
-        ? "border-l-mine-solid"
-        : "border-l-steel-300";
+        ? "border-l-info-600"
+        : "border-l-gray-300";
 
   return (
     <Panel interactive className={`overflow-hidden border-l-2 ${border}`}>
@@ -233,26 +230,26 @@ function StepRow({ step, tone }: { step: WorkerStep; tone: "running" | "mine" | 
         className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-4"
       >
         <div className="min-w-0 flex-1">
-          <p className="text-base font-semibold text-steel-900">{step.name}</p>
-          <p className="mt-0.5 text-sm text-steel-500">
+          <p className="text-base font-semibold text-gray-900">{step.name}</p>
+          <p className="mt-0.5 text-sm text-gray-500">
             {step.itemName}
-            <span className="text-steel-300"> / </span>
+            <span className="text-gray-300"> / </span>
             <span className="tnum">{step.orderNumber}</span>
           </p>
-          <p className="mt-0.5 text-xs text-steel-400">
+          <p className="mt-0.5 text-xs text-gray-400">
             {formatRelativeDue(step.dueDate)}
             {step.expectedMinutes ? ` · ${formatMinutes(step.expectedMinutes)} estimated` : ""}
             {step.stationName ? ` · ${step.stationName}` : ""}
           </p>
         </div>
         {tone === "running" && (
-          <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-active-fg">
-            <span className="h-2 w-2 rounded-full bg-active-solid" aria-hidden />
+          <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-warning-700">
+            <span className="h-2 w-2 rounded-full bg-warning-500" aria-hidden />
             Clocked on
           </span>
         )}
         {tone === "mine" && (
-          <span className="shrink-0 rounded-full bg-mine-solid px-2 py-0.5 text-xs font-medium text-white">
+          <span className="shrink-0 rounded-full bg-info-600 px-2 py-0.5 text-xs font-medium text-white">
             Yours
           </span>
         )}

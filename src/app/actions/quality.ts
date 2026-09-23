@@ -4,10 +4,22 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { operationDependencies } from "@/db/schema";
-import { requireRole } from "@/lib/session";
+import {
+  operationDependencies,
+  qualityEvents,
+  taskEvents,
+  workOrderTasks,
+  workOrders,
+} from "@/db/schema";
+import { requireRole, requireUser } from "@/lib/session";
+import { canWorkOnTask, terminalStation } from "@/lib/terminal";
 import { CommandError } from "@/lib/inventory";
-import { allocateOutput, inspectOutput, satisfiedQuantityFor } from "@/lib/outputs";
+import {
+  allocateOutput,
+  inspectOutput,
+  satisfiedQuantityFor,
+  scrapFinishedOutput,
+} from "@/lib/outputs";
 
 const request = z
   .object({
@@ -93,5 +105,111 @@ export async function recordInspection(
   } catch (error) {
     if (error instanceof CommandError) return { ok: false, error: error.message };
     return { ok: false, error: "Could not record that inspection. Check your access and retry." };
+  }
+}
+
+const scrapFinished = z
+  .object({
+    commandId: z.uuid(),
+    operationId: z.number().int().positive(),
+    quantity: z.number().int().positive(),
+    reasonCodeId: z.number().int().positive(),
+    note: z.string().trim().max(300).optional(),
+  })
+  .strict();
+
+/**
+ * Write off work this step already finished.
+ *
+ * Open to whoever could have done the step, not just a supervisor. The person who
+ * made the part is the one who notices it is wrong, and a write-off that needs
+ * somebody else found first is a write-off that happens tomorrow, after the part
+ * has moved.
+ *
+ * The step goes back to unfinished. It is: the order still wants the quantity, and
+ * a step that owes work has no business sitting on a Done list.
+ */
+export async function scrapFinishedWork(
+  input: z.infer<typeof scrapFinished>
+): Promise<{ ok: true; result: { scrapped: number; reopened: boolean } } | { ok: false; error: string }> {
+  try {
+    const user = await requireUser();
+    const parsed = scrapFinished.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Say how many and why" };
+    const { commandId, operationId, quantity, reasonCodeId, note } = parsed.data;
+
+    const [task] = await db
+      .select({
+        id: workOrderTasks.id,
+        status: workOrderTasks.status,
+        stationId: workOrderTasks.stationId,
+        assignedToUserId: workOrderTasks.assignedToUserId,
+        workOrderId: workOrderTasks.workOrderId,
+        itemId: workOrders.itemId,
+      })
+      .from(workOrderTasks)
+      .innerJoin(workOrders, eq(workOrderTasks.workOrderId, workOrders.id))
+      .where(eq(workOrderTasks.id, operationId));
+    if (!task) return { ok: false, error: "That step does not exist" };
+
+    const terminal = await terminalStation();
+    const permission = canWorkOnTask({
+      role: user.role,
+      userId: user.id,
+      homeStationId: user.stationId,
+      terminalStationId: terminal?.id ?? null,
+      taskStationId: task.stationId,
+      assignedToUserId: task.assignedToUserId,
+    });
+    if (!permission.allowed) return { ok: false, error: permission.reason };
+
+    let scrapped = 0;
+    await db.transaction(async (tx) => {
+      ({ scrapped } = await scrapFinishedOutput(
+        {
+          commandId,
+          operationId,
+          quantity,
+          reason: note?.trim() || "Made wrong",
+          actorUserId: user.id,
+        },
+        { tx }
+      ));
+
+      await tx.insert(qualityEvents).values({
+        workOrderTaskId: operationId,
+        type: "SCRAP",
+        quantity,
+        itemId: task.itemId,
+        reasonCodeId,
+        notes: note?.trim() || null,
+        recordedByUserId: user.id,
+      });
+
+      if (task.status === "DONE") {
+        await tx
+          .update(workOrderTasks)
+          .set({ status: "IN_PROGRESS", completedAt: null, completedByUserId: null })
+          .where(eq(workOrderTasks.id, operationId));
+        await tx
+          .update(workOrders)
+          .set({ status: "IN_PROGRESS" })
+          .where(eq(workOrders.id, task.workOrderId));
+      }
+
+      await tx.insert(taskEvents).values({
+        workOrderTaskId: operationId,
+        type: "QUALITY",
+        actorUserId: user.id,
+        source: "HUMAN",
+        payload: { type: "SCRAP", quantity, reasonCodeId },
+      });
+    });
+
+    revalidatePath("/", "layout");
+    return { ok: true, result: { scrapped, reopened: task.status === "DONE" } };
+  } catch (error) {
+    if (error instanceof CommandError) return { ok: false, error: error.message };
+    return { ok: false, error: "Could not record that. Retry — it will not record twice." };
   }
 }

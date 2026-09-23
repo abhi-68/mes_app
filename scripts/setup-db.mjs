@@ -3,7 +3,9 @@
  * PostgreSQL over the network instead of shelling out to `sudo -u postgres psql`,
  * which only exists on Debian-style Linux.
  *
- *   node scripts/setup-db.mjs              # rebuild the database in .env, then seed
+ *   node scripts/setup-db.mjs              # rebuild the database in .env, then seed an empty factory
+ *   node scripts/setup-db.mjs --demo       # rebuild and seed the full worked example
+ *   node scripts/setup-db.mjs --clean      # rebuild, example catalogue and stock, no orders
  *   node scripts/setup-db.mjs --test       # rebuild mes_test, no seed (for the suite)
  *   node scripts/setup-db.mjs --no-seed    # rebuild, leave it empty
  *
@@ -156,9 +158,20 @@ await target.end();
 
 // --- Seed ------------------------------------------------------------------
 if (!noSeed) {
-  // --clean seeds the factory and the stores, but no work in progress.
-  const clean = args.includes("--clean") ? " -- --no-orders" : "";
-  run(`npx tsx src/db/seed.ts${clean}`, clean ? "seeding a clean floor" : "seeding demo data");
+  /*
+    Empty by default: people, stations, reason codes and stores, but no products
+    and no orders. A factory types in its own catalogue, and shipping demo part
+    numbers as the starting state teaches them ours.
+
+    --demo  the full worked example, mid-build, for showing the system.
+    --clean the example catalogue and stock, but no work in progress.
+  */
+  const mode = args.includes("--demo")
+    ? { flag: "", label: "seeding the worked example" }
+    : args.includes("--clean")
+      ? { flag: " -- --no-orders", label: "seeding a clean floor" }
+      : { flag: " -- --bare", label: "seeding an empty factory" };
+  run(`npx tsx src/db/seed.ts${mode.flag}`, mode.label);
 }
 
 console.log("");

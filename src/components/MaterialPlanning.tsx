@@ -57,31 +57,28 @@ export function MaterialPlanning({ rows, locationName, canReserve, checkedAt }: 
   }
 
   return <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-9">
-    <PageHeader eyebrow="Material planning" title="What the open jobs need"
-      subtitle="Setting stock aside promises it to one job so another cannot claim it. Nothing moves off the shelf until a worker scans the batch at the station." />
+    <PageHeader eyebrow="Material planning" title="What the open jobs need" />
     <div className="mt-7 grid gap-4 sm:grid-cols-3">
-      <Stat label="Can set aside" value={reservable.length} note="Jobs with some free stock waiting to be promised to them" />
-      <Stat label="Short of stock" value={short.length} note="Not enough free stock to cover the remainder" tone={short.length ? "alert" : "default"} />
-      <Stat label="Sub-assembly requirements" value={rows.filter(r => r.fromSubassembly).length} note="Supplied through child work orders" />
+      <Stat label="Can set aside" value={reservable.length} />
+      <Stat label="Short of stock" value={short.length} tone={short.length ? "alert" : "default"} />
+      <Stat label="From sub-assemblies" value={rows.filter(r => r.fromSubassembly).length} />
     </div>
     <Panel className="mt-6 px-5 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-steel-900">{locationName ? `Picking location: ${locationName}` : "No picking location configured"}</p>
-          <p className="mt-1 text-sm text-steel-500">{canReserve ? "Set stock aside job by job below." : "Read-only view. A supervisor or admin can set stock aside."} Setting aside promises a quantity, not a particular batch — the worker&rsquo;s scan decides which one.</p>
-          <p className="mt-1 text-xs text-steel-500">Free stock is shared between orders. Counts are a preview; each reservation checks again when saved. Other locations are not included.</p>
+          <p className="text-sm font-medium text-gray-900">{locationName ? `Picking location: ${locationName}` : "No picking location configured"}</p>
+          <p className="mt-1 text-xs text-gray-400">Checked at {checkedAt.replace("T", " ").slice(0, 19)} UTC</p>
         </div>
         <Button disabled={pending} onClick={() => startTransition(() => router.refresh())}>Refresh availability</Button>
       </div>
-      <p className="mt-2 text-xs text-steel-400">Checked at {checkedAt.replace("T", " ").slice(0, 19)} UTC</p>
     </Panel>
     <div className="my-5 flex flex-wrap gap-3">
-      <label className="min-w-60 flex-1 text-sm text-steel-600">Search orders, parts or stations
-        <input className="mt-1 min-h-11 w-full rounded-md border border-steel-300 bg-white px-3" value={search}
+      <label className="min-w-60 flex-1 text-sm text-gray-600">Search orders, parts or stations
+        <input className="mt-1 min-h-11 w-full rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3" value={search}
           onChange={e => setSearch(e.target.value)} placeholder="Order number, SKU or station" />
       </label>
-      <label className="text-sm text-steel-600">Show
-        <select className="mt-1 block min-h-11 rounded-md border border-steel-300 bg-white px-3" value={filter} onChange={e => setFilter(e.target.value)}>
+      <label className="text-sm text-gray-600">Show
+        <select className="mt-1 block min-h-11 rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3" value={filter} onChange={e => setFilter(e.target.value)}>
           <option value="all">All requirements</option><option value="reserve">Can set aside</option>
           <option value="short">Short of stock</option><option value="assembly">Sub-assemblies</option>
         </select>
@@ -94,9 +91,9 @@ export function MaterialPlanning({ rows, locationName, canReserve, checkedAt }: 
         const message = feedback[row.requirementId];
         return <Panel key={row.requirementId} className="px-5 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div><Link className="inline-flex min-h-11 items-center text-sm font-semibold text-navy-800 underline" href={`/orders/${row.orderId}`}>{row.orderNumber}</Link>
-              <p className="font-medium text-steel-900">{row.itemName} <span className="font-mono text-xs text-steel-400">{row.sku}</span></p>
-              <p className="mt-1 text-sm text-steel-500">{row.operationName} · {row.stationName ?? "No station assigned"}</p></div>
+            <div><Link className="inline-flex min-h-11 items-center text-sm font-semibold text-gray-800 underline" href={`/orders/${row.orderId}`}>{row.orderNumber}</Link>
+              <p className="font-medium text-gray-900">{row.itemName} <span className="font-mono text-xs text-gray-400">{row.sku}</span></p>
+              <p className="mt-1 text-sm text-gray-500">{row.operationName} · {row.stationName ?? "No station assigned"}</p></div>
             <Chip tone={row.fromSubassembly ? "neutral" : row.uncovered === 0 ? "neutral" : "quiet"}>
               {row.fromSubassembly ? "Sub-assembly supply" : row.uncovered === 0 ? "Material covered" : "Needs reservation"}
             </Chip>
@@ -104,15 +101,15 @@ export function MaterialPlanning({ rows, locationName, canReserve, checkedAt }: 
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
             {[["Required", row.required], ["Net issued", row.issued], ["Reserved", row.reserved],
               ["From sub-assembly", row.supplied], ["Uncovered", row.uncovered]].map(([label, value]) =>
-              <div key={label}><dt className="text-steel-500">{label}</dt><dd className="tnum mt-1 font-semibold text-steel-900">{value} {row.unit}</dd></div>)}
+              <div key={label}><dt className="text-gray-500">{label}</dt><dd className="tnum mt-1 font-semibold text-gray-900">{value} {row.unit}</dd></div>)}
           </dl>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-steel-100 pt-3">
-            {row.fromSubassembly ? <p className="text-sm text-steel-500">Follow the child order in the work-order tree. Stock reservation cannot replace its output handoff.</p>
-              : <><p className="text-sm text-steel-600">{row.onHand} on hand · {row.held} on hold · <strong>{row.free} {row.unit} free</strong> · setting aside does not move it off the shelf</p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3">
+            {row.fromSubassembly ? <p className="text-sm text-gray-500">Follow the child order in the work-order tree. Stock reservation cannot replace its output handoff.</p>
+              : <><p className="text-sm text-gray-600">{row.onHand} on hand · {row.held} quarantined · <strong>{row.free} {row.unit} free</strong></p>
                 {canReserve && <Button tone="primary" disabled={pending || !locationName || reservableQty <= 0}
                   onClick={() => reserve(row)}>{busyId === row.requirementId ? "Setting aside…" : `Set aside${reservableQty > 0 ? ` ${reservableQty} ${row.unit}` : ""}`}</Button>}</>}
           </div>
-          {message && <p role={message.error ? "alert" : "status"} className={`mt-3 text-sm ${message.error ? "text-blocked-fg" : "text-ok-fg"}`}>{message.text}</p>}
+          {message && <p role={message.error ? "alert" : "status"} className={`mt-3 text-sm ${message.error ? "text-danger-700" : "text-success-700"}`}>{message.text}</p>}
         </Panel>;
       })}</div>}
   </div>;

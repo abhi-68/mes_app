@@ -33,21 +33,15 @@ export function SupervisorHomeScreen({
   alertCount: number;
 }) {
   const firstName = user.name.split(" ")[0];
-  const quiet = data.blocked.length === 0 && data.overdue.length === 0;
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-9">
       <PageHeader
         eyebrow="Supervisor"
         title={`Hello, ${firstName}`}
-        subtitle={
-          quiet
-            ? "Nothing is blocked and nothing is overrunning. Below is where the work is sitting."
-            : "Everything that has stopped or is running long, worst first. Open one to clear it."
-        }
       />
 
-      <div className="mt-7 grid gap-4 sm:grid-cols-4">
+      <div className="mt-7 grid gap-4 sm:grid-cols-3">
         <Stat
           label="Blocked"
           value={data.blocked.length}
@@ -60,29 +54,23 @@ export function SupervisorHomeScreen({
           tone={data.overdue.length ? "alert" : "default"}
           note="Past twice the estimate"
         />
-        <Stat
-          label="Nobody assigned"
-          value={data.needsSomeone}
-          tone="muted"
-          note="Waiting for anyone to pick up"
-        />
         <Stat label="Units in build" value={data.openUnits} note="Not yet finished" />
       </div>
 
       {/* --- blocked ------------------------------------------------------ */}
       <section className="mt-8">
         <SectionHeading
-          note={data.blocked.length > 0 ? "Oldest first — nobody else will clear these" : undefined}
+          note={undefined}
         >
           Blocked right now
         </SectionHeading>
         {data.blocked.length === 0 ? (
           <EmptyState
             title="Nothing is blocked"
-            hint="A step flagged on the floor appears here immediately, with who raised it and why."
+
           />
         ) : (
-          <Panel className="divide-y divide-steel-100 overflow-hidden border-l-2 border-l-blocked-solid">
+          <Panel className="divide-y divide-gray-100 overflow-hidden border-l-2 border-l-danger-600">
             {data.blocked.map((b) => (
               <div
                 key={b.id}
@@ -91,32 +79,32 @@ export function SupervisorHomeScreen({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                     {b.reason && <Chip tone="alert">{b.reason}</Chip>}
-                    <p className="text-[0.9375rem] font-medium text-steel-900">{b.name}</p>
+                    <p className="text-[0.9375rem] font-medium text-gray-900">{b.name}</p>
                   </div>
-                  {b.note && <p className="mt-1 text-sm text-blocked-fg">{b.note}</p>}
-                  <p className="mt-1 text-xs text-steel-400">
-                    <Link href={`/orders/${b.workOrderId}`} className="tnum underline underline-offset-2 hover:text-navy-800">
+                  {b.note && <p className="mt-1 text-sm text-danger-700">{b.note}</p>}
+                  <p className="mt-1 text-xs text-gray-400">
+                    <Link href={`/orders/${b.workOrderId}`} className="tnum underline underline-offset-2 hover:text-primary-600">
                       {b.orderNumber}
                     </Link>
-                    <span className="text-steel-300"> · </span>
+                    <span className="text-gray-300"> · </span>
                     {b.itemName}
                     {b.stationName && (
                       <>
-                        <span className="text-steel-300"> · </span>
+                        <span className="text-gray-300"> · </span>
                         {b.stationName}
                       </>
                     )}
                     {b.raisedBy && (
                       <>
-                        <span className="text-steel-300"> · </span>
+                        <span className="text-gray-300"> · </span>
                         raised by {b.raisedBy}
                       </>
                     )}
                     {b.ageMinutes !== null && (
                       <>
-                        <span className="text-steel-300"> · </span>
+                        <span className="text-gray-300"> · </span>
                         <span
-                          className={b.ageMinutes > 60 ? "font-medium text-blocked-fg" : ""}
+                          className={b.ageMinutes > 60 ? "font-medium text-danger-700" : ""}
                         >
                           {b.ageMinutes < 1
                             ? "just flagged"
@@ -143,32 +131,32 @@ export function SupervisorHomeScreen({
       {/* --- overrunning --------------------------------------------------- */}
       {data.overdue.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="Still running, past twice the estimate">
+          <SectionHeading>
             Taking much longer than expected
           </SectionHeading>
-          <Panel className="divide-y divide-steel-100 overflow-hidden">
+          <Panel className="divide-y divide-gray-100 overflow-hidden">
             {data.overdue.map((o) => (
               <div
                 key={o.id}
                 className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-3.5"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-steel-900">{o.name}</p>
-                  <p className="mt-0.5 text-xs text-steel-400">
-                    <Link href={`/orders/${o.workOrderId}`} className="tnum underline underline-offset-2 hover:text-navy-800">
+                  <p className="text-sm font-medium text-gray-900">{o.name}</p>
+                  <p className="mt-0.5 text-xs text-gray-400">
+                    <Link href={`/orders/${o.workOrderId}`} className="tnum underline underline-offset-2 hover:text-primary-600">
                       {o.orderNumber}
                     </Link>
-                    <span className="text-steel-300"> · </span>
+                    <span className="text-gray-300"> · </span>
                     {o.itemName}
                     {o.who && (
                       <>
-                        <span className="text-steel-300"> · </span>
+                        <span className="text-gray-300"> · </span>
                         {o.who} is on it
                       </>
                     )}
                     {o.stationName && (
                       <>
-                        <span className="text-steel-300"> · </span>
+                        <span className="text-gray-300"> · </span>
                         {o.stationName}
                       </>
                     )}
@@ -176,10 +164,10 @@ export function SupervisorHomeScreen({
                 </div>
                 <div className="flex shrink-0 items-center gap-4">
                   <p className="tnum text-right text-sm">
-                    <span className="font-semibold text-blocked-fg">
+                    <span className="font-semibold text-danger-700">
                       {formatMinutes(o.elapsedMinutes)}
                     </span>
-                    <span className="text-steel-400">
+                    <span className="text-gray-400">
                       {" "}
                       / {formatMinutes(o.expectedMinutes ?? 0)}
                     </span>
@@ -191,31 +179,27 @@ export function SupervisorHomeScreen({
               </div>
             ))}
           </Panel>
-          <p className="mt-2 text-xs text-steel-400">
-            A step that has genuinely taken longer is worth correcting on the timesheet rather
-            than leaving to skew the estimates — the original is kept either way.
-          </p>
         </section>
       )}
 
       {/* --- station workload ---------------------------------------------- */}
       <section className="mt-8">
-        <SectionHeading note="Where the open work is sitting, and who is on shift">
+        <SectionHeading>
           Station workload
         </SectionHeading>
         {data.load.length === 0 ? (
-          <EmptyState title="No stations set up yet" hint="An admin creates these in Setup." />
+          <EmptyState title="No stations set up yet" />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {data.load.map((s) => (
               <Panel key={s.stationName} className="px-5 py-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="text-[0.9375rem] font-medium text-steel-900">{s.stationName}</p>
-                  <p className="text-sm text-steel-500">
+                  <p className="text-[0.9375rem] font-medium text-gray-900">{s.stationName}</p>
+                  <p className="text-sm text-gray-500">
                     <span className="tnum">{s.open}</span> open step{s.open === 1 ? "" : "s"}
                   </p>
                 </div>
-                <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-steel-500">
+                <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
                   <span>
                     <span className="tnum">{s.peopleOnShift}</span>{" "}
                     {s.peopleOnShift === 1 ? "person" : "people"} clocked on
@@ -224,7 +208,7 @@ export function SupervisorHomeScreen({
                     <span className="tnum">{s.running}</span> running
                   </span>
                   {s.blocked > 0 && (
-                    <span className="font-medium text-blocked-fg">
+                    <span className="font-medium text-danger-700">
                       <span className="tnum">{s.blocked}</span> blocked
                     </span>
                   )}
@@ -235,9 +219,7 @@ export function SupervisorHomeScreen({
                   )}
                 </div>
                 {s.open > 0 && s.peopleOnShift === 0 && (
-                  <p className="mt-2 text-xs text-steel-400">
-                    Work waiting and nobody clocked on here.
-                  </p>
+                  <p className="mt-2 text-xs text-gray-400">Nobody clocked on here.</p>
                 )}
               </Panel>
             ))}
@@ -245,27 +227,31 @@ export function SupervisorHomeScreen({
         )}
       </section>
 
-      <Panel className="mt-9 px-5 py-4">
-        <p className="text-sm text-steel-500">
-          To hand a specific step to a specific person, open{" "}
-          <Link href="/my-station" className="font-medium text-navy-700 underline">
-            All stations
-          </Link>{" "}
-          and use <span className="font-medium text-steel-700">Give to someone</span> on the card.
-          They are told, and it goes to the top of their screen.
+      <div className="mt-9 flex flex-wrap gap-2">
+        <Link
+          href="/my-station"
+          className="inline-flex min-h-9 items-center rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50"
+        >
+          All stations
+        </Link>
+        <Link
+          href="/alerts"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50"
+        >
+          Alerts
           {alertCount > 0 && (
-            <>
-              {" "}
-              There {alertCount === 1 ? "is" : "are"} {alertCount} thing
-              {alertCount === 1 ? "" : "s"} in{" "}
-              <Link href="/alerts" className="font-medium text-navy-700 underline">
-                Alerts
-              </Link>
-              .
-            </>
+            <span className="tnum rounded bg-danger-50 px-1.5 text-xs font-medium text-danger-700">
+              {alertCount}
+            </span>
           )}
-        </p>
-      </Panel>
+        </Link>
+        <Link
+          href="/waiting"
+          className="inline-flex min-h-9 items-center rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50"
+        >
+          What&apos;s waiting
+        </Link>
+      </div>
     </div>
   );
 }

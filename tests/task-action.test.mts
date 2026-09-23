@@ -68,10 +68,13 @@ let startTask: typeof import("../src/app/actions/tasks.ts").startTask;
 let placeHold: typeof import("../src/lib/inventory.ts").placeHold;
 let receiveStock: typeof import("../src/lib/inventory.ts").receiveStock;
 let coverageFor: typeof import("../src/lib/inventory.ts").coverageFor;
+let issueUnreserved: typeof import("../src/lib/inventory.ts").issueUnreserved;
 
 before(async () => {
   ({ startTask } = await import("../src/app/actions/tasks.ts"));
-  ({ placeHold, receiveStock, coverageFor } = await import("../src/lib/inventory.ts"));
+  ({ placeHold, receiveStock, coverageFor, issueUnreserved } = await import(
+    "../src/lib/inventory.ts"
+  ));
 });
 
 let MOTOR = 0;
@@ -186,23 +189,46 @@ const taskRow = async () => {
   return t;
 };
 
+/** Stand in for the handler walking to the rack and scanning what they lifted. */
+const collect = (quantity = 1) =>
+  issueUnreserved({
+    commandId: uid("pick"),
+    requirementId: REQ,
+    itemId: MOTOR,
+    locationId: STORES,
+    quantity,
+  });
+
 // ===========================================================================
 
-test("successful start: the motor is committed but NOT drawn, clock running, event written", async () => {
-  // Start used to draw the material too, guessing the batch. It now commits the
-  // stock and stops; the handler collects it and scans what they lifted.
+test("a step will not start while its material is still on the rack", async () => {
   await receiveStock({ commandId: uid("rcv"), itemId: MOTOR, locationId: STORES, quantity: 3 });
+
+  const res = await startTask(TASK, "cmd-uncollected");
+  assert.equal(res.ok, false, "the stock is in the building, but not in their hands");
+  if (!res.ok) {
+    assert.match(res.error, /Collect the material first/);
+    assert.equal(res.code, "MATERIAL_NOT_COLLECTED");
+  }
+
+  assert.equal((await balance()).onHand, 3, "nothing moved");
+  assert.equal((await balance()).activeReserved, 0, "and nothing was committed either");
+  assert.equal((await taskRow()).status, "PENDING");
+  assert.equal(
+    (await db.select().from(timeEntries).where(eq(timeEntries.workOrderTaskId, TASK))).length,
+    0,
+    "no clock started"
+  );
+});
+
+test("successful start: material already collected, clock running, event written", async () => {
+  await receiveStock({ commandId: uid("rcv"), itemId: MOTOR, locationId: STORES, quantity: 3 });
+  await collect();
 
   const res = await startTask(TASK, "cmd-success-1");
   assert.equal(res.ok, true, res.ok ? "" : res.error);
 
-  assert.equal((await balance()).onHand, 3, "nothing has left the shelf");
-  assert.equal((await balance()).activeReserved, 1, "one motor is committed to this step");
-  assert.equal(
-    (await db.select().from(inventoryMovements).where(eq(inventoryMovements.type, "ISSUE"))).length,
-    0,
-    "and no issue movement was written"
-  );
+  assert.equal((await balance()).onHand, 2, "the motor left the shelf when it was scanned");
   assert.equal((await coverageFor(REQ)).uncovered, 0);
   assert.equal((await taskRow()).status, "IN_PROGRESS");
 
@@ -218,8 +244,9 @@ test("successful start: the motor is committed but NOT drawn, clock running, eve
   assert.equal(events[0].type, "STARTED");
 });
 
-test("duplicate request with the SAME command id commits material once", async () => {
+test("duplicate request with the SAME command id opens one clock", async () => {
   await receiveStock({ commandId: uid("rcv"), itemId: MOTOR, locationId: STORES, quantity: 3 });
+  await collect();
 
   // The worker taps Start, the response is lost, the worker taps again. The UI reuses
   // the command id, so the server must treat the second call as the same action.
@@ -228,20 +255,25 @@ test("duplicate request with the SAME command id commits material once", async (
 
   assert.equal(a.ok, true);
   assert.equal(b.ok, true, "a replay is not an error");
-  assert.equal((await balance()).onHand, 3, "nothing drawn either time");
-  assert.equal((await balance()).activeReserved, 1, "ONE motor committed, not two");
+  assert.equal((await balance()).onHand, 2, "nothing drawn either time");
+  assert.equal(
+    (await db.select().from(timeEntries).where(eq(timeEntries.workOrderTaskId, TASK))).length,
+    1,
+    "ONE clock, not two"
+  );
 });
 
-test("a NEW command id does not let the same start commit twice", async () => {
+test("a NEW command id does not draw the material a second time", async () => {
   await receiveStock({ commandId: uid("rcv"), itemId: MOTOR, locationId: STORES, quantity: 3 });
+  await collect();
 
   await startTask(TASK, "cmd-first");
   // A different id is a different command, but the requirement is already covered,
-  // so coverage short-circuits and nothing further is committed.
+  // so coverage short-circuits and nothing further is drawn.
   await startTask(TASK, "cmd-second");
 
-  assert.equal((await balance()).activeReserved, 1, "still one motor committed");
-  assert.equal((await balance()).onHand, 3);
+  assert.equal((await balance()).onHand, 2, "still just the one motor gone");
+  assert.equal((await balance()).activeReserved, 0);
 });
 
 test("insufficient stock: task does not start and nothing is consumed", async () => {
@@ -340,6 +372,7 @@ test("authorization: a worker cannot start a step at another station", async () 
 
 test("authorization: a supervisor may start a step at any station", async () => {
   await receiveStock({ commandId: uid("rcv"), itemId: MOTOR, locationId: STORES, quantity: 3 });
+  await collect();
   await db
     .update(workOrderTasks)
     .set({ stationId: OTHER_STATION })
@@ -482,12 +515,13 @@ test("a step starts when its component came from a sub-assembly rather than the 
   });
 
   await receiveStock({ commandId: uid("rcv"), itemId: MOTOR, locationId: STORES, quantity: 3 });
+  await collect();
 
   const res = await startTask(TASK, "cmd-subasm-1");
 
   assert.equal(res.ok, true, res.ok ? "" : res.error);
   assert.equal((await taskRow()).status, "IN_PROGRESS");
-  assert.equal((await balance()).activeReserved, 1, "the purchased motor was committed normally");
+  assert.equal((await balance()).onHand, 2, "the purchased motor was collected normally");
 
   const stockMoves = await db
     .select()

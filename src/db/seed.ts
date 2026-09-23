@@ -48,15 +48,20 @@ async function main() {
       // Two lines, because a plant that runs one is the easy case and this demo
       // should show the harder one. Fabrication feeds Assembly; `sortOrder` is
       // the order the job travels, which is what the floor map draws.
+      //
+      // `capacity` is how many jobs run at once. These numbers are INVENTED —
+      // Thermal Corp's real bay count is not known, and the shape of the
+      // bottleneck is the point: sheet metal feeds everything so it has most
+      // capacity, and final assembly is one bay because a unit is built in place.
       .values([
-        { name: "Sheet Metal / Cutting", description: "Shear, punch and form sheet stock", line: "Fabrication", sortOrder: 10, number: 10 },
-        { name: "Frame Fab", description: "Weld and square the casing frame", line: "Fabrication", sortOrder: 20, number: 20 },
-        { name: "Panel & Door Fab", description: "Insulated double-wall panels and access doors", line: "Fabrication", sortOrder: 20, number: 30 },
-        { name: "Coil Line", description: "Coil section build, braze and pressure test", line: "Fabrication", sortOrder: 20, number: 40 },
-        { name: "Fan & Motor Assembly", description: "Fan wheel, shaft, bearings, motor and drive", line: "Fabrication", sortOrder: 20, number: 50 },
-        { name: "Electrical & Controls", description: "Disconnects, starters, VFD wiring", line: "Assembly", sortOrder: 30, number: 60 },
-        { name: "Final Assembly", description: "Mount all sections into the casing", line: "Assembly", sortOrder: 40, number: 70 },
-        { name: "QC / Dispatch", description: "Leak test, run test, inspection and crating", line: "Assembly", sortOrder: 50, number: 80 },
+        { name: "Sheet Metal / Cutting", description: "Shear, punch and form sheet stock", line: "Fabrication", sortOrder: 10, number: 10, capacity: 3 },
+        { name: "Frame Fab", description: "Weld and square the casing frame", line: "Fabrication", sortOrder: 20, number: 20, capacity: 2 },
+        { name: "Panel & Door Fab", description: "Insulated double-wall panels and access doors", line: "Fabrication", sortOrder: 20, number: 30, capacity: 2 },
+        { name: "Coil Line", description: "Coil section build, braze and pressure test", line: "Fabrication", sortOrder: 20, number: 40, capacity: 1 },
+        { name: "Fan & Motor Assembly", description: "Fan wheel, shaft, bearings, motor and drive", line: "Fabrication", sortOrder: 20, number: 50, capacity: 2 },
+        { name: "Electrical & Controls", description: "Disconnects, starters, VFD wiring", line: "Assembly", sortOrder: 30, number: 60, capacity: 1 },
+        { name: "Final Assembly", description: "Mount all sections into the casing", line: "Assembly", sortOrder: 40, number: 70, capacity: 2 },
+        { name: "QC / Dispatch", description: "Leak test, run test, inspection and crating", line: "Assembly", sortOrder: 50, number: 80, capacity: 1 },
       ])
       .returning();
 
@@ -125,6 +130,45 @@ async function main() {
     { category: "DOWNTIME", code: "CHANGEOVER", label: "Changeover / setup" },
     { category: "DOWNTIME", code: "NO_WORK", label: "No work available" },
   ]);
+
+  // --- Stores and vendors --------------------------------------------------
+  // Opening stock enters as RECEIPT movements through the engine, so balances and
+  // the ledger agree from the first row. There is no direct write path to balances.
+  const [stores] = await db
+    .insert(inventoryLocations)
+    .values({ code: "STORES", name: "Main stores" })
+    .returning();
+
+  const [kloeckner, beshert, fgm] = await db
+    .insert(vendors)
+    .values([
+      { name: "Kloeckner Metals Corp - HTX", contactName: "R. Tan" },
+      { name: "Beshert Steel Processing" },
+      { name: "FGM - Pacesetter LLC" },
+    ])
+    .returning();
+
+  /*
+    Everything above is the factory itself: who works here, where they work, the
+    words they use for a problem, and where stock lives. Everything below is an
+    example product and example orders.
+
+    `--bare` stops here. That is the right starting point for a real factory: they
+    type in their own products, and an empty floor is honest where a demo one
+    quietly teaches them our made-up part numbers.
+  */
+  if (process.argv.includes("--bare")) {
+    console.log("");
+    console.log("Empty factory seeded — people, stations, reason codes, stores.");
+    console.log("Logins (password for all: password123):");
+    console.log("  admin@thermal-corp.com       ADMIN");
+    console.log("  supervisor@thermal-corp.com  SUPERVISOR");
+    console.log("  forklift@thermal-corp.com    FORKLIFT");
+    console.log("  worker1@..worker4@thermal-corp.com  WORKER");
+    console.log("");
+    console.log("Add your products under Setup, then raise an order.");
+    return;
+  }
 
   // --- Customer ------------------------------------------------------------
   const [customer] = await db
@@ -271,22 +315,6 @@ async function main() {
   ]);
 
   // --- Stock -----------------------------------------------------------------
-  // Opening stock enters as RECEIPT movements through the engine, so balances and the
-  // ledger agree from the first row. There is no direct write path to balances.
-  const [stores] = await db
-    .insert(inventoryLocations)
-    .values({ code: "STORES", name: "Main stores" })
-    .returning();
-
-  // --- Vendors -------------------------------------------------------------
-  const [kloeckner, beshert, fgm] = await db
-    .insert(vendors)
-    .values([
-      { name: "Kloeckner Metals Corp - HTX", contactName: "R. Tan" },
-      { name: "Beshert Steel Processing" },
-      { name: "FGM - Pacesetter LLC" },
-    ])
-    .returning();
 
   /*
     Opening stock, received as identified batches.

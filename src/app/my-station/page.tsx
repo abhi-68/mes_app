@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { stations, workOrderTasks } from "@/db/schema";
 import { getCurrentUser, isManager } from "@/lib/session";
 import { StationList } from "@/components/StationList";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -40,9 +41,42 @@ export default async function StationsPage() {
     .groupBy(workOrderTasks.stationId);
   const loadOf = new Map(load.map((l) => [l.stationId, l]));
 
+  // Work with this person's name on it, wherever it is. Being handed a job is
+  // useless if the only way to find out is to guess the right station first.
+  const mine = await db.query.workOrderTasks.findMany({
+    where: and(
+      eq(workOrderTasks.assignedToUserId, user.id),
+      inArray(workOrderTasks.status, ["PENDING", "IN_PROGRESS", "BLOCKED"])
+    ),
+    with: { station: true, workOrder: true },
+    orderBy: [asc(workOrderTasks.sequence)],
+  });
+
   return (
-    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-9">
-      <PageHeader title="Pick a station" />
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 lg:px-8">
+      <PageHeader title="Pick a station" subtitle="Open the station you are working at." />
+
+      {mine.length > 0 && (
+        <section className="mt-6">
+          <SectionHeading note="Given to you by name">Yours to do next</SectionHeading>
+          <div className="space-y-2">
+            {mine.map((t) => (
+              <Link
+                key={t.id}
+                href={`/my-station/${t.stationId}`}
+                className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border border-gray-200 bg-white px-4 py-3 transition-colors duration-100 hover:bg-gray-50"
+              >
+                <span className="tnum text-sm font-semibold text-gray-950">
+                  {t.jobNumber ?? t.workOrder.orderNumber}
+                </span>
+                <span className="flex-1 text-sm text-gray-700">{t.name}</span>
+                <span className="text-sm text-gray-500">{t.station?.name}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="mt-6">
         <StationList
           stations={rows.map((s) => ({

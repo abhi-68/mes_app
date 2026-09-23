@@ -14,7 +14,7 @@ export function InspectionQueue({ rows, canInspect }: { rows: InspectionItem[]; 
   return rows.length === 0 ? (
     <EmptyState
       title="Nothing is waiting on an inspector"
-      hint="Finished work for parts marked 'requires inspection' arrives here. Everything else is accepted when its step is completed."
+
     />
   ) : (
     <div className="space-y-4">
@@ -98,14 +98,14 @@ function InspectionCard({ row, canInspect }: { row: InspectionItem; canInspect: 
     <Panel className="px-5 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-medium text-steel-900">
-            {row.itemName} <span className="font-mono text-xs text-steel-400">{row.sku}</span>
+          <p className="font-medium text-gray-900">
+            {row.itemName} <span className="font-mono text-xs text-gray-400">{row.sku}</span>
           </p>
-          <p className="mt-0.5 text-sm text-steel-500">
+          <p className="mt-0.5 text-sm text-gray-500">
             {row.operationName} · {row.stationName ?? "No station"} ·{" "}
             <Link
               href={`/orders/${row.orderId}`}
-              className="underline-offset-2 hover:text-navy-800 hover:underline"
+              className="underline-offset-2 hover:text-primary-600 hover:underline"
             >
               {row.orderNumber}
             </Link>
@@ -121,7 +121,7 @@ function InspectionCard({ row, canInspect }: { row: InspectionItem; canInspect: 
 
       {/* The cost of leaving it in the queue, stated rather than implied. */}
       {row.waitingOperationName && shortfall > 0 && (
-        <p className="mt-3 rounded-md bg-blocked-bg px-3 py-2 text-sm text-blocked-fg">
+        <p className="mt-3 rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700">
           Holding up <strong>{row.waitingOperationName}</strong> on {row.waitingOrderNumber} —
           short {shortfall}.
         </p>
@@ -135,20 +135,20 @@ function InspectionCard({ row, canInspect }: { row: InspectionItem; canInspect: 
           ["Scrapped", row.scrapped],
         ].map(([label, value]) => (
           <div key={label as string}>
-            <dt className="text-steel-500">{label}</dt>
-            <dd className="tnum mt-1 font-semibold text-steel-900">{value}</dd>
+            <dt className="text-gray-500">{label}</dt>
+            <dd className="tnum mt-1 font-semibold text-gray-900">{value}</dd>
           </div>
         ))}
       </dl>
 
       {canInspect ? (
-        <div className="mt-4 border-t border-steel-100 pt-3">
+        <div className="mt-4 border-t border-gray-100 pt-3">
           <div className="flex flex-wrap items-end gap-3">
             {row.pendingInspection > 0 && row.awaitingRework > 0 && (
-              <label className="text-sm text-steel-600">
+              <label className="text-sm text-gray-600">
                 Inspecting
                 <select
-                  className="mt-1 block min-h-11 rounded-md border border-steel-300 bg-white px-3"
+                  className="mt-1 block min-h-11 rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3"
                   value={source}
                   onChange={(e) => {
                     const next = e.target.value as Source;
@@ -162,22 +162,22 @@ function InspectionCard({ row, canInspect }: { row: InspectionItem; canInspect: 
               </label>
             )}
 
-            <label className="text-sm text-steel-600">
+            <label className="text-sm text-gray-600">
               Quantity
               <input
                 type="number"
                 min={1}
                 max={available}
-                className="tnum mt-1 block min-h-11 w-28 rounded-md border border-steel-300 bg-white px-3"
+                className="tnum mt-1 block min-h-11 w-28 rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3"
                 value={qty}
                 onChange={(e) => setQty(Number(e.target.value))}
               />
             </label>
 
-            <label className="min-w-52 flex-1 text-sm text-steel-600">
-              Reason <span className="text-steel-400">(required to scrap)</span>
+            <label className="min-w-52 flex-1 text-sm text-gray-600">
+              Reason <span className="text-gray-400">(required to scrap)</span>
               <input
-                className="mt-1 block min-h-11 w-full rounded-md border border-steel-300 bg-white px-3"
+                className="mt-1 block min-h-11 w-full rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Bowed skin, out of flatness"
@@ -200,15 +200,15 @@ function InspectionCard({ row, canInspect }: { row: InspectionItem; canInspect: 
           </div>
         </div>
       ) : (
-        <p className="mt-4 border-t border-steel-100 pt-3 text-sm text-steel-500">
-          Read-only view. A supervisor or admin records the verdict.
+        <p className="mt-4 border-t border-gray-100 pt-3 text-sm text-gray-500">
+          Read-only. A supervisor records the verdict.
         </p>
       )}
 
       {message && (
         <p
           role={message.error ? "alert" : "status"}
-          className={`mt-3 text-sm ${message.error ? "text-blocked-fg" : "text-ok-fg"}`}
+          className={`mt-3 text-sm ${message.error ? "text-danger-700" : "text-success-700"}`}
         >
           {message.text}
         </p>

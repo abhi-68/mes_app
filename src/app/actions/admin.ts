@@ -20,6 +20,7 @@ import { requireRole } from "@/lib/session";
 import { nextWorkOrderNumber } from "@/lib/numbering";
 import { releaseWorkOrder } from "@/lib/work-orders";
 import { receiveStock } from "@/lib/inventory";
+import { dueDateFromInput } from "@/lib/schedule";
 import { randomUUID } from "node:crypto";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -190,6 +191,7 @@ export async function addRoutingStep(input: {
   name: string;
   stationId: number | null;
   expectedMinutes: number | null;
+  instructions?: string | null;
 }): Promise<ActionResult> {
   return wrap(async () => {
     await requireRole("ADMIN");
@@ -206,6 +208,7 @@ export async function addRoutingStep(input: {
       name: input.name.trim(),
       stationId: input.stationId,
       expectedMinutes: input.expectedMinutes,
+      instructions: input.instructions?.trim() || null,
     });
   });
 }
@@ -349,8 +352,10 @@ export async function createWorkOrder(input: {
   customerId: number | null;
   quantity: number;
   dueDate: string | null;
-}): Promise<ActionResult> {
-  return wrap(async () => {
+  dimensions?: string | null;
+  materialType?: string | null;
+}): Promise<{ ok: true; orderId: number; orderNumber: string } | { ok: false; error: string }> {
+  return wrapWith(async () => {
     const admin = await requireRole("ADMIN", "SUPERVISOR");
     if (input.quantity < 1) throw new Error("Quantity must be at least 1");
 
@@ -376,7 +381,9 @@ export async function createWorkOrder(input: {
           itemId: input.itemId,
           customerId: input.customerId,
           quantity: input.quantity,
-          dueDate: input.dueDate ? new Date(input.dueDate) : null,
+          dimensions: input.dimensions?.trim() || null,
+          materialType: input.materialType?.trim() || null,
+          dueDate: dueDateFromInput(input.dueDate),
           status: "PLANNED",
           createdByUserId: admin.id,
         })
@@ -386,6 +393,7 @@ export async function createWorkOrder(input: {
 
     // Releasing builds the task list and the whole sub-assembly tree.
     await releaseWorkOrder(order.id, admin.id);
+    return { orderId: order.id, orderNumber: order.orderNumber };
   });
 }
 
@@ -397,6 +405,20 @@ export async function createCustomer(name: string): Promise<ActionResult> {
   });
 }
 
+/** Same thing, but hands back the row so a form can select what it just created. */
+export async function addCustomer(name: string) {
+  return wrapWith(async () => {
+    await requireRole("ADMIN", "SUPERVISOR");
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error("A customer needs a name");
+    const [row] = await db
+      .insert(customers)
+      .values({ name: trimmed })
+      .returning({ id: customers.id, name: customers.name });
+    return { customer: row };
+  });
+}
+
 /* ------------------------- Made-to-order ---------------------------- */
 
 export type MadeToOrderInput = {
@@ -405,6 +427,9 @@ export type MadeToOrderInput = {
   sku: string;
   quantity: number;
   dueDate: string | null;
+  /** What the customer asked for, in their words. Free text — see the column comment. */
+  dimensions?: string | null;
+  materialType?: string | null;
   /**
    * What one unit is built from, each line attached to the step that consumes it.
    * `stepIndex` is a position in `steps` — you cut sheet at the laser and bolt at
@@ -413,7 +438,7 @@ export type MadeToOrderInput = {
    */
   materials: { itemId: number; quantity: number; stepIndex: number }[];
   /** The steps, in the order the job travels. */
-  steps: { name: string; stationId: number | null }[];
+  steps: { name: string; stationId: number | null; instructions?: string | null }[];
 };
 
 /**
@@ -480,6 +505,7 @@ export async function createMadeToOrder(
             sequence: (i + 1) * 10,
             name: step.name.trim(),
             stationId: step.stationId,
+            instructions: step.instructions?.trim() || null,
           })
           .returning({ id: routingSteps.id });
         createdSteps.push(row.id);
@@ -506,7 +532,9 @@ export async function createMadeToOrder(
           itemId: product.id,
           customerId: input.customerId,
           quantity: input.quantity,
-          dueDate: input.dueDate ? new Date(input.dueDate) : null,
+          dimensions: input.dimensions?.trim() || null,
+          materialType: input.materialType?.trim() || null,
+          dueDate: dueDateFromInput(input.dueDate),
           status: "PLANNED",
           createdByUserId: admin.id,
         })

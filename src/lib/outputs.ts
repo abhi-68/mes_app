@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db as defaultDb } from "@/db";
 import * as schema from "@/db/schema";
@@ -125,6 +125,64 @@ export async function outputStateFor(
   };
 }
 
+/**
+ * What a station finished recently, with how much of it can still be written off.
+ *
+ * Two days rather than "today": a part finished on the late shift is found wrong
+ * the next morning, and a list that has already forgotten it is no use.
+ */
+export async function recentlyFinishedAt(
+  stationId: number,
+  exec: Exec = {}
+): Promise<
+  Array<{
+    id: number;
+    name: string;
+    jobNumber: string | null;
+    orderId: number;
+    orderNumber: string;
+    itemName: string;
+    completedAt: Date | null;
+    writableOff: number;
+    fitted: number;
+  }>
+> {
+  const database = exec.tx ?? exec.db ?? defaultDb;
+  const since = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+  const rows = await database.query.workOrderTasks.findMany({
+    where: and(
+      eq(schema.workOrderTasks.stationId, stationId),
+      eq(schema.workOrderTasks.status, "DONE"),
+      gte(schema.workOrderTasks.completedAt, since)
+    ),
+    with: { workOrder: { with: { item: true } } },
+    orderBy: [desc(schema.workOrderTasks.completedAt)],
+    limit: 8,
+  });
+
+  return Promise.all(
+    rows.map(async (t) => {
+      const out = await outputStateFor(t.id, exec);
+      return {
+        id: t.id,
+        name: t.name,
+        jobNumber: t.jobNumber,
+        orderId: t.workOrderId,
+        orderNumber: t.workOrder.orderNumber,
+        itemName: t.workOrder.item.name,
+        completedAt: t.completedAt,
+        writableOff:
+          out.pendingInspection +
+          out.awaitingRework +
+          out.accepted -
+          out.issuedToParentOutstanding,
+        fitted: out.issuedToParentOutstanding,
+      };
+    })
+  );
+}
+
 /** New output arrives as pendingInspection — never as accepted, never as scrap. */
 export async function reportProduction(
   input: { commandId: string; operationId: number; quantity: number; actorUserId?: number },
@@ -248,6 +306,53 @@ export async function allocateOutput(
       kind: "ALLOCATE",
       quantity: input.quantity,
       requirementId: input.requirementId,
+      commandId: input.commandId,
+      actorUserId: input.actorUserId ?? null,
+    });
+  });
+}
+
+/**
+ * Release an earmark without installing anything.
+ *
+ * The reverse of allocate, for when the part it was set aside for turns out not to
+ * exist any more. Nothing physical moves: the unit stays `accepted` and becomes
+ * usable again, so this must be followed by whatever decided to release it.
+ */
+export async function deallocateOutput(
+  input: {
+    commandId: string;
+    operationId: number;
+    requirementId: number | null;
+    quantity: number;
+    reason?: string;
+    actorUserId?: number;
+  },
+  exec: Exec = {}
+): Promise<void> {
+  await runIn(exec, async (tx) => {
+    if ((await claimCommand(tx, input.commandId, "DeallocateOutput", input)) === "replay") return;
+    if (input.quantity < 1) throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
+
+    const out = await lockOutput(tx, input.operationId);
+    if (out.allocatedOutstanding < input.quantity) {
+      throw new CommandError(
+        `Only ${out.allocatedOutstanding} allocated, cannot release ${input.quantity}`,
+        "STATE_GUARD"
+      );
+    }
+
+    await tx
+      .update(operationOutputs)
+      .set({ allocatedOutstanding: out.allocatedOutstanding - input.quantity })
+      .where(eq(operationOutputs.id, out.id));
+
+    await tx.insert(dispositionRecords).values({
+      operationId: input.operationId,
+      kind: "DEALLOCATE",
+      quantity: input.quantity,
+      requirementId: input.requirementId,
+      reason: input.reason ?? null,
       commandId: input.commandId,
       actorUserId: input.actorUserId ?? null,
     });
@@ -497,6 +602,137 @@ export async function releaseOutputHold(
       commandId: input.commandId,
       actorUserId: input.actorUserId ?? null,
     });
+  });
+}
+
+/**
+ * Write off work this step already finished, because it turned out to be wrong.
+ *
+ * The mistake is usually found after the step is done and its output has been
+ * handed on, which is exactly when `inspectOutput` refuses: it will not move
+ * anything out of `accepted` that is spoken for. Refusing is right for an
+ * inspector correcting a verdict, and wrong for the person who made the part and
+ * can see it is junk. So this releases the earmark first and then scraps.
+ *
+ * Takes from the least committed bucket first. Units of one part are
+ * interchangeable, so which ones are "the bad ones" is not a real question — the
+ * only thing the order decides is how much has to be undone.
+ *
+ * Anything already fitted into the parent is refused. That unit is built; saying
+ * its component is scrap while it stays installed would describe a machine that
+ * does not exist. It has to come back out first, which is a person with a
+ * spanner, not a row in a table.
+ */
+export async function scrapFinishedOutput(
+  input: {
+    commandId: string;
+    operationId: number;
+    quantity: number;
+    reason: string;
+    actorUserId?: number;
+  },
+  exec: Exec = {}
+): Promise<{ scrapped: number }> {
+  return runIn(exec, async (tx) => {
+    if ((await claimCommand(tx, input.commandId, "ScrapFinishedOutput", input)) === "replay") {
+      return { scrapped: 0 };
+    }
+    if (input.quantity < 1) throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
+
+    const out = await lockOutput(tx, input.operationId);
+    const reachable =
+      out.pendingInspection + out.awaitingRework + out.accepted - out.issuedToParentOutstanding;
+
+    if (reachable < input.quantity) {
+      const fitted = out.issuedToParentOutstanding;
+      throw new CommandError(
+        fitted > 0
+          ? `${fitted} of these are already fitted into the next assembly and have to come back out before they can be written off. ${reachable} can be written off here.`
+          : `Only ${reachable} can be written off here, not ${input.quantity}.`,
+        "STATE_GUARD"
+      );
+    }
+
+    let left = input.quantity;
+    const take = (available: number) => {
+      const n = Math.min(available, left);
+      left -= n;
+      return n;
+    };
+    const fromPending = take(out.pendingInspection);
+    const fromRework = take(out.awaitingRework);
+    const fromAccepted = take(out.accepted - out.issuedToParentOutstanding);
+
+    // Scrapping an earmarked unit means the parent is no longer getting it. Release
+    // the earmark first or `inspectOutput` refuses, and the parent goes on counting
+    // a part that is in the skip.
+    const uncommitted = out.accepted - out.allocatedOutstanding - out.issuedToParentOutstanding;
+    let toRelease = Math.max(0, fromAccepted - uncommitted);
+    if (toRelease > 0) {
+      const deps = await tx
+        .select()
+        .from(schema.operationDependencies)
+        .where(
+          and(
+            eq(schema.operationDependencies.dependsOnOperationId, input.operationId),
+            eq(schema.operationDependencies.type, "REQUIRED_QUANTITY")
+          )
+        );
+
+      for (const dep of deps) {
+        if (toRelease <= 0) break;
+        const n = Math.min(toRelease, input.quantity);
+        await deallocateOutput(
+          {
+            commandId: `${input.commandId}:release:${dep.id}`,
+            operationId: input.operationId,
+            requirementId: dep.requirementId ?? null,
+            quantity: n,
+            reason: input.reason,
+            actorUserId: input.actorUserId,
+          },
+          { tx }
+        );
+        toRelease -= n;
+      }
+
+      if (toRelease > 0) {
+        await deallocateOutput(
+          {
+            commandId: `${input.commandId}:release:loose`,
+            operationId: input.operationId,
+            requirementId: null,
+            quantity: toRelease,
+            reason: input.reason,
+            actorUserId: input.actorUserId,
+          },
+          { tx }
+        );
+      }
+    }
+
+    const moves: Array<["pendingInspection" | "awaitingRework" | "accepted", number]> = [
+      ["pendingInspection", fromPending],
+      ["awaitingRework", fromRework],
+      ["accepted", fromAccepted],
+    ];
+    for (const [from, quantity] of moves) {
+      if (quantity < 1) continue;
+      await inspectOutput(
+        {
+          commandId: `${input.commandId}:${from}`,
+          operationId: input.operationId,
+          from,
+          to: "scrapped",
+          quantity,
+          reason: input.reason,
+          actorUserId: input.actorUserId,
+        },
+        { tx }
+      );
+    }
+
+    return { scrapped: input.quantity };
   });
 }
 

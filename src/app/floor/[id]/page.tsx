@@ -31,7 +31,7 @@ export default async function StationPage(props: PageProps<"/floor/[id]">) {
         actions={
           <Link
             href="/floor"
-            className="inline-flex min-h-11 items-center text-sm text-steel-500 hover:text-navy-900"
+            className="inline-flex min-h-11 items-center text-sm text-gray-500 hover:text-gray-950"
           >
             Back to floor map
           </Link>
@@ -53,7 +53,7 @@ export default async function StationPage(props: PageProps<"/floor/[id]">) {
         <div className="mt-8">
           <EmptyState
             title="Nothing here"
-            hint="Work appears as soon as an order reaches this station."
+
           />
         </div>
       ) : (
@@ -81,25 +81,25 @@ function Group({
     <section>
       <p
         className={`mb-2 text-xs font-semibold uppercase tracking-wide ${
-          tone === "alert" ? "text-blocked-fg" : "text-steel-400"
+          tone === "alert" ? "text-danger-700" : "text-gray-400"
         }`}
       >
         {title} · {jobs.length}
       </p>
-      <Panel className="divide-y divide-steel-100">
+      <Panel className="divide-y divide-gray-100">
         {jobs.map((j) => (
           <div key={j.operationId} className="px-5 py-3.5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <Link
                 href={`/orders/${j.orderId}`}
-                className="tnum inline-flex min-h-11 items-center font-semibold text-navy-800 hover:underline"
+                className="tnum inline-flex min-h-11 items-center font-semibold text-gray-800 hover:underline"
               >
                 {j.orderNumber}
               </Link>
-              <span className="text-xs text-steel-400">{formatRelativeDue(j.dueDate)}</span>
+              <span className="text-xs text-gray-400">{formatRelativeDue(j.dueDate)}</span>
             </div>
-            <p className="text-[0.9375rem] text-steel-900">{j.operationName}</p>
-            <p className="text-sm text-steel-500">{j.itemName}</p>
+            <p className="text-[0.9375rem] text-gray-900">{j.operationName}</p>
+            <p className="text-sm text-gray-500">{j.itemName}</p>
 
             {/* Only what needs a person; queueing behind your own predecessor is
                 normal flow and saying so on every row buries the rest. */}
@@ -108,7 +108,7 @@ function Group({
               .map((b, i) => (
                 <p key={i} className="mt-1.5 flex flex-wrap items-baseline gap-2 text-sm">
                   <Chip tone="alert">{b.label}</Chip>
-                  <span className="text-steel-600">{b.detail}</span>
+                  <span className="text-gray-600">{b.detail}</span>
                 </p>
               ))}
           </div>

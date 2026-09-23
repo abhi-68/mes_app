@@ -8,6 +8,7 @@ import {
   inventoryMovements,
   inventoryHolds,
   materialRequirements,
+  qualityEvents,
   reservations,
   processedCommands,
   stockLots,
@@ -62,6 +63,8 @@ export class CommandError extends Error {
       | "NOT_FOUND"
       /** An operation dependency is not yet satisfied (spec §2). */
       | "DEPENDENCY"
+      /** The stock exists but is still on the rack, not in the worker's hands. */
+      | "MATERIAL_NOT_COLLECTED"
   ) {
     super(message);
     this.name = "CommandError";
@@ -103,6 +106,29 @@ async function claimCommand(
 
   await tx.insert(processedCommands).values({ commandId, commandType, payloadHash });
   return "fresh";
+}
+
+/**
+ * Keep a command's own answer so a replay can return what the first attempt returned.
+ *
+ * Without this a retry reports zeros, and a zero is not "nothing to say" — it reads as
+ * "nothing was written off" or "no hold exists", which is a different fact from the true
+ * one. `receiveStock` solves the same problem by re-reading its movement; commands whose
+ * answer is not recoverable from the ledger record it here instead.
+ */
+async function recordResult(tx: Tx, commandId: string, result: unknown): Promise<void> {
+  await tx
+    .update(processedCommands)
+    .set({ resultRef: JSON.stringify(result) })
+    .where(eq(processedCommands.commandId, commandId));
+}
+
+async function priorResult<T>(tx: Tx, commandId: string): Promise<T | null> {
+  const [row] = await tx
+    .select({ resultRef: processedCommands.resultRef })
+    .from(processedCommands)
+    .where(eq(processedCommands.commandId, commandId));
+  return row?.resultRef ? (JSON.parse(row.resultRef) as T) : null;
 }
 
 /** Locks the balance row for this item+location, creating it at zero if absent. */
@@ -237,6 +263,9 @@ export async function receiveStock(
         .where(eq(inventoryMovements.commandId, input.commandId));
       lotId = prior?.lotId ?? null;
       return;
+    }
+    if (input.quantity < 1) {
+      throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
     }
 
     if (input.lot) {
@@ -515,23 +544,20 @@ export async function reserveForRequirement(
 
   await run(exec, async (tx) => {
     if ((await claimCommand(tx, input.commandId, "ReserveForRequirement", input)) === "replay") {
-      const [existing] = await tx
-        .select()
-        .from(reservations)
-        .where(
-          and(
-            eq(reservations.requirementId, input.requirementId),
-            eq(reservations.itemId, input.itemId)
-          )
-        );
-      reserved = existing?.outstandingQty ?? 0;
+      // What THIS command reserved, not what is outstanding now — an issue in between
+      // would otherwise make the retry report less than it actually reserved.
+      reserved = (await priorResult<{ reserved: number }>(tx, input.commandId))?.reserved ?? 0;
       return;
+    }
+    if (input.quantity < 1) {
+      throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
     }
 
     const balance = await lockBalance(tx, input.itemId, input.locationId);
     // Held stock can be neither reserved nor issued, by anyone.
     const free = balance.onHand - balance.activeReserved - balance.heldQty;
     reserved = Math.max(0, Math.min(input.quantity, free));
+    await recordResult(tx, input.commandId, { reserved });
     if (reserved === 0) return;
 
     await tx
@@ -599,6 +625,9 @@ export async function issueAgainstReservation(
   await run(exec, async (tx) => {
     if ((await claimCommand(tx, input.commandId, "IssueAgainstReservation", input)) === "replay")
       return;
+    if (input.quantity < 1) {
+      throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
+    }
 
     const balance = await lockBalance(tx, input.itemId, input.locationId);
 
@@ -739,6 +768,9 @@ export async function issueUnreserved(
 ): Promise<void> {
   await run(exec, async (tx) => {
     if ((await claimCommand(tx, input.commandId, "IssueUnreserved", input)) === "replay") return;
+    if (input.quantity < 1) {
+      throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
+    }
 
     const balance = await lockBalance(tx, input.itemId, input.locationId);
     const free = balance.onHand - balance.activeReserved - balance.heldQty;
@@ -766,7 +798,8 @@ export async function issueUnreserved(
       .set({ issuedQty: req.issuedQty + input.quantity })
       .where(eq(materialRequirements.id, input.requirementId));
 
-    // Same lot split as the reserved path. An unreserved issue is still material
+    // Same lot split as the reserved path, and the same honesty about it: nobody named
+    // these lots, so they are marked ASSUMED. An unreserved issue is still material
     // leaving the building and still has to be traceable.
     const draws = await allocateAcrossLots(tx, input.itemId, input.locationId, input.quantity);
     for (const draw of draws) {
@@ -777,6 +810,66 @@ export async function issueUnreserved(
         quantity: -draw.quantity,
         requirementId: input.requirementId,
         lotId: draw.lotId,
+        lotAssumed: draw.lotId !== null,
+        commandId: input.commandId,
+        actorUserId: input.actorUserId ?? null,
+      });
+    }
+  });
+}
+
+/**
+ * A finished unit leaves the building on a truck.
+ *
+ * Not an ISSUE: nothing consumed it, it was sold. Without this the unit is
+ * received into finished goods when its last step is signed off and then stays
+ * there for ever, so the rack fills up with machines that are already at
+ * customers' sites and "units on hand" stops meaning anything.
+ */
+export async function shipFinishedGoods(
+  input: {
+    commandId: string;
+    itemId: number;
+    locationId: number;
+    quantity: number;
+    lotId?: number | null;
+    actorUserId?: number;
+  },
+  exec: Exec = {}
+): Promise<void> {
+  await run(exec, async (tx) => {
+    if ((await claimCommand(tx, input.commandId, "ShipFinishedGoods", input)) === "replay") return;
+    if (input.quantity < 1) {
+      throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
+    }
+
+    const balance = await lockBalance(tx, input.itemId, input.locationId);
+    const free = balance.onHand - balance.activeReserved - balance.heldQty;
+    if (free < input.quantity) {
+      throw new CommandError(
+        `Only ${free} of ${balance.onHand} on hand can be shipped`,
+        "INSUFFICIENT_STOCK"
+      );
+    }
+
+    await tx
+      .update(inventoryBalances)
+      .set({ onHand: balance.onHand - input.quantity })
+      .where(eq(inventoryBalances.id, balance.id));
+
+    // The unit's batch IS its order number, so the lot is known rather than assumed.
+    const draws = input.lotId
+      ? [{ lotId: input.lotId, quantity: input.quantity }]
+      : await allocateAcrossLots(tx, input.itemId, input.locationId, input.quantity);
+
+    for (const draw of draws) {
+      await tx.insert(inventoryMovements).values({
+        itemId: input.itemId,
+        locationId: input.locationId,
+        type: "SHIPMENT",
+        quantity: -draw.quantity,
+        lotId: draw.lotId,
+        lotAssumed: !input.lotId && draw.lotId !== null,
         commandId: input.commandId,
         actorUserId: input.actorUserId ?? null,
       });
@@ -797,6 +890,9 @@ export async function returnMaterial(
 ): Promise<void> {
   await run(exec, async (tx) => {
     if ((await claimCommand(tx, input.commandId, "ReturnMaterial", input)) === "replay") return;
+    if (input.quantity < 1) {
+      throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
+    }
 
     const balance = await lockBalance(tx, input.itemId, input.locationId);
     await tx
@@ -975,7 +1071,13 @@ export async function placeHold(
 ): Promise<{ holdId: number }> {
   let holdId = 0;
   await run(exec, async (tx) => {
-    if ((await claimCommand(tx, input.commandId, "PlaceHold", input)) === "replay") return;
+    if ((await claimCommand(tx, input.commandId, "PlaceHold", input)) === "replay") {
+      holdId = (await priorResult<{ holdId: number }>(tx, input.commandId))?.holdId ?? 0;
+      return;
+    }
+    if (input.quantity < 1) {
+      throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
+    }
 
     const balance = await lockBalance(tx, input.itemId, input.locationId);
 
@@ -1068,6 +1170,7 @@ export async function placeHold(
       })
       .returning();
     holdId = hold.id;
+    await recordResult(tx, input.commandId, { holdId });
   });
   return { holdId };
 }
@@ -1141,7 +1244,15 @@ export async function scrapStock(
   let reservationsReleased = 0;
 
   await run(exec, async (tx) => {
-    if ((await claimCommand(tx, input.commandId, "ScrapStock", input)) === "replay") return;
+    if ((await claimCommand(tx, input.commandId, "ScrapStock", input)) === "replay") {
+      const prior = await priorResult<{ scrapped: number; reservationsReleased: number }>(
+        tx,
+        input.commandId
+      );
+      scrapped = prior?.scrapped ?? 0;
+      reservationsReleased = prior?.reservationsReleased ?? 0;
+      return;
+    }
     if (input.quantity < 1) {
       throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
     }
@@ -1243,7 +1354,99 @@ export async function scrapStock(
 
     scrapped = input.quantity;
     reservationsReleased = released;
+    await recordResult(tx, input.commandId, { scrapped, reservationsReleased });
   });
 
   return { scrapped, reservationsReleased };
+}
+
+/**
+ * Material already issued to a step, found unusable at the bench.
+ *
+ * Different from `scrapStock` in every way that matters. That one is a handler at
+ * the rack writing off free stock. This is an operator opening the box for a job
+ * that is already committed, and finding the sheet bent or the tube short.
+ *
+ * NO INVENTORY MOVEMENT IS WRITTEN, AND THAT IS DELIBERATE. The stock left stores
+ * when it was issued; a second negative movement would take it off the shelf
+ * twice and break the reconciliation between balances and their own history. What
+ * changes is `scrappedFromWipQty`, and the arithmetic downstream was already built
+ * for it — `netIssued = issued − returned − scrappedFromWip` is read by readiness,
+ * by coverage and by material planning. Raising it makes the step short again on
+ * its own, with no separate signal to keep in step.
+ *
+ * The lot is recorded because it is the point. Stock arrives against a mill heat
+ * number, so an operator saying "this one is no good" can be traced to the heat and
+ * the vendor it came from — which turns a tap on the floor into a buying decision.
+ */
+export async function scrapIssuedMaterial(
+  input: {
+    commandId: string;
+    requirementId: number;
+    quantity: number;
+    /** Which batch it came from, when the operator can say. */
+    lotId?: number | null;
+    reasonCodeId?: number | null;
+    note?: string | null;
+    actorUserId?: number;
+  },
+  exec: Exec = {}
+): Promise<{ scrapped: number; stillIssued: number }> {
+  let scrapped = 0;
+  let stillIssued = 0;
+
+  await run(exec, async (tx) => {
+    if ((await claimCommand(tx, input.commandId, "ScrapIssuedMaterial", input)) === "replay") {
+      const prior = await priorResult<{ scrapped: number; stillIssued: number }>(
+        tx,
+        input.commandId
+      );
+      scrapped = prior?.scrapped ?? 0;
+      stillIssued = prior?.stillIssued ?? 0;
+      return;
+    }
+    if (input.quantity < 1) {
+      throw new CommandError("Quantity must be at least 1", "STATE_GUARD");
+    }
+
+    const [req] = await tx
+      .select()
+      .from(materialRequirements)
+      .where(eq(materialRequirements.id, input.requirementId))
+      .for("update");
+    if (!req) throw new CommandError("No such material requirement", "STATE_GUARD");
+
+    // You cannot throw away more than you were actually given.
+    const inHand = req.issuedQty - req.returnedQty - req.scrappedFromWipQty;
+    if (inHand < input.quantity) {
+      throw new CommandError(
+        inHand <= 0
+          ? "None of that material is out on this step"
+          : `Only ${inHand} of that material is out on this step`,
+        "STATE_GUARD"
+      );
+    }
+
+    await tx
+      .update(materialRequirements)
+      .set({ scrappedFromWipQty: req.scrappedFromWipQty + input.quantity })
+      .where(eq(materialRequirements.id, input.requirementId));
+
+    await tx.insert(qualityEvents).values({
+      workOrderTaskId: req.operationId,
+      type: "SCRAP",
+      quantity: input.quantity,
+      reasonCodeId: input.reasonCodeId ?? null,
+      itemId: req.itemId,
+      lotId: input.lotId ?? null,
+      notes: input.note?.trim() || null,
+      recordedByUserId: input.actorUserId ?? null,
+    });
+
+    scrapped = input.quantity;
+    stillIssued = inHand - input.quantity;
+    await recordResult(tx, input.commandId, { scrapped, stillIssued });
+  });
+
+  return { scrapped, stillIssued };
 }

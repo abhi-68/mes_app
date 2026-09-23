@@ -26,10 +26,14 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
   const user = await getCurrentUser();
   const manager = user ? isManager(user.role) : false;
 
-  const balances = await db.query.inventoryBalances.findMany({
-    with: { item: true, location: true },
-    orderBy: [asc(inventoryBalances.id)],
-  });
+  const balances = (
+    await db.query.inventoryBalances.findMany({
+      with: { item: true, location: true },
+      orderBy: [asc(inventoryBalances.id)],
+    })
+    // Finished units have their own screen. Mixing them in here buries the copper
+    // tube a buyer is looking for under the machines it went into.
+  ).filter((b) => !b.item.isFinishedGood);
 
   // Lots per balance row, derived from the ledger. One query per row is fine at
   // this scale and is the honest shape; batching it is a change to make when a
@@ -52,11 +56,35 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
     })
   );
 
-  const committed = withLots.filter((r) => r.available <= 0 && r.onHand > 0);
-  const onHold = withLots.filter((r) => r.held > 0);
-  const belowReorder = withLots.filter((r) => r.reorderPoint > 0 && r.available <= r.reorderPoint);
+
+  /*
+    Free stock per ITEM, summed over every batch and every location.
+
+    A reorder point answers "do we need to buy more tube?", which is a question
+    about the tube and not about one pallet or one shelf. Comparing a single row
+    against it says "below" on all four pallets of a heat that between them are
+    twice the threshold — and once a buyer has seen that be wrong, they stop
+    reading the column.
+  */
+  const freeByItem = new Map<number, number>();
+  const onHandByItem = new Map<number, number>();
+  for (const r of withLots) {
+    freeByItem.set(r.item.id, (freeByItem.get(r.item.id) ?? 0) + r.available);
+    onHandByItem.set(r.item.id, (onHandByItem.get(r.item.id) ?? 0) + r.onHand);
+  }
+
+  const itemsTracked = new Map(withLots.map((r) => [r.item.id, r.item]));
+  const belowReorder = [...itemsTracked.values()].filter(
+    (item) => item.reorderPoint > 0 && (freeByItem.get(item.id) ?? 0) <= item.reorderPoint
+  );
   const lotCount = withLots.reduce((s, r) => s + r.lots.length, 0);
   const untraceable = withLots.reduce((s, r) => s + Math.max(0, r.unlotted), 0);
+
+  // Quantities, not counts of rows. Taking three sheets has to move a number on
+  // this page, or the page looks broken to the person who just took them.
+  const unitsOnHand = withLots.reduce((s, r) => s + r.onHand, 0);
+  const unitsPromised = withLots.reduce((s, r) => s + r.reserved, 0);
+  const unitsFree = withLots.reduce((s, r) => s + r.available, 0);
 
   /**
    * Searching filters the rows, never the tiles above them. "3 items below reorder
@@ -86,6 +114,8 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
     reserved: number;
     held: number;
     reorderPoint: number;
+    /** Free stock of this ITEM everywhere, not just on this row. */
+    itemFree: number;
     receivedAt: Date | null;
     traced: boolean;
   };
@@ -100,6 +130,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
       reserved: r.reserved,
       held: r.held,
       reorderPoint: r.reorderPoint,
+      itemFree: freeByItem.get(r.item.id) ?? 0,
     };
     const lotRows: StockRow[] = r.lots.map((l) => ({
       ...base,
@@ -171,8 +202,8 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
       sortable: true,
       render: (r) => (
         <>
-          <p className="text-steel-800">{r.itemName}</p>
-          <p className="tnum mt-0.5 font-mono text-xs text-steel-400">{r.sku}</p>
+          <p className="text-gray-800">{r.itemName}</p>
+          <p className="tnum mt-0.5 font-mono text-xs text-gray-400">{r.sku}</p>
         </>
       ),
     },
@@ -186,7 +217,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
         r.heatNumber ? (
           <span className="tnum font-mono text-xs">{r.heatNumber}</span>
         ) : (
-          <span className="text-steel-400">—</span>
+          <span className="text-gray-400">—</span>
         ),
     },
     {
@@ -195,38 +226,25 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
       sortable: true,
       render: (r) =>
         r.batchNumber ? (
-          <div className="flex items-center gap-2">
+          // ScanAndReject scrolls to this row by batch code, and verify-labels reads
+          // the painted bars out of it.
+          <div className="flex items-center gap-2" data-lot-batch={r.batchNumber}>
             <span className="tnum font-mono text-xs">{r.batchNumber}</span>
             <BarcodeLabel code={r.batchNumber} compact />
           </div>
         ) : (
-          <Chip tone="quiet">No batch</Chip>
+          <Chip tone="quiet">No label</Chip>
         ),
     },
-    { key: "uom", label: "UOM", render: (r) => <span className="text-steel-500">{r.unit}</span> },
+    { key: "uom", label: "UOM", render: (r) => <span className="text-gray-500">{r.unit}</span> },
     {
       key: "available",
       label: "Available",
       sortable: true,
       align: "right",
-      render: (r) => {
-        const free = r.onHand - r.reserved - r.held;
-        return (
-          <>
-            <span className="tnum font-medium text-steel-900">{r.available}</span>
-            {(r.reserved > 0 || r.held > 0) && (
-              <p className="tnum mt-0.5 text-xs text-steel-400">
-                {r.reserved > 0 ? `${r.reserved} committed` : ""}
-                {r.reserved > 0 && r.held > 0 ? " · " : ""}
-                {r.held > 0 ? `${r.held} held` : ""}
-              </p>
-            )}
-            {free <= 0 && r.onHand > 0 && (
-              <p className="mt-0.5 text-xs text-blocked-fg">none free</p>
-            )}
-          </>
-        );
-      },
+      render: (r) => (
+        <span className="tnum font-medium text-gray-900">{r.available}</span>
+      ),
     },
     {
       key: "reorder",
@@ -234,13 +252,16 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
       align: "right",
       secondary: true,
       render: (r) => {
-        if (r.reorderPoint <= 0) return <span className="text-steel-400">—</span>;
-        const free = r.onHand - r.reserved - r.held;
-        const low = free <= r.reorderPoint;
+        if (r.reorderPoint <= 0) return <span className="text-gray-400">—</span>;
+        const low = r.itemFree <= r.reorderPoint;
         return (
           <>
-            <span className="tnum text-steel-600">{r.reorderPoint}</span>
-            {low && <p className="mt-0.5 text-xs font-medium text-blocked-fg">below</p>}
+            <span className="tnum text-gray-600">{r.reorderPoint}</span>
+            {low && (
+              <p className="mt-0.5 text-xs font-medium text-danger-700">
+                <span className="tnum">{r.itemFree}</span> free in all
+              </p>
+            )}
           </>
         );
       },
@@ -250,7 +271,7 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
       label: "Storage location",
       sortable: true,
       secondary: true,
-      render: (r) => r.storageLocation ?? <span className="text-steel-400">—</span>,
+      render: (r) => r.storageLocation ?? <span className="text-gray-400">—</span>,
     },
   ];
 
@@ -285,37 +306,26 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-9">
       <PageHeader
         eyebrow="Stores"
-        title="Stock"
-        subtitle="What is on the racks, batch by batch. Finished units land here too when their last step is signed off."
+        title="Inventory"
+        subtitle="Materials and bought-in parts, batch by batch."
       />
 
       <Link
         href="/materials"
-        className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-navy-800 underline"
+        className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-gray-800 underline"
       >
         What the open jobs still need →
       </Link>
 
       <div className="mt-7 grid gap-4 sm:grid-cols-4">
-        <Stat label="Items tracked" value={withLots.length} />
-        <Stat label="Batches on hand" value={lotCount} note="Each with its own label" />
+        <Stat label="On the racks" value={unitsOnHand} note={`${itemsTracked.size} materials`} />
+        <Stat label="Free to use" value={unitsFree} />
+        <Stat label="Promised to jobs" value={unitsPromised} />
         <Stat
-          label="Fully committed"
-          value={committed.length}
-          tone={committed.length ? "alert" : "default"}
-          note="On hand, but none of it free"
-        />
-        <Stat
-          label="Below reorder point"
+          label="Need buying"
           value={belowReorder.length}
           tone={belowReorder.length ? "alert" : "default"}
-          note={
-            belowReorder.length
-              ? "Supervisors are alerted"
-              : onHold.length
-                ? `${onHold.length} on quality hold`
-                : "Nothing to buy"
-          }
+          note="Free stock at or under the reorder point"
         />
       </div>
 
@@ -337,18 +347,18 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
       </section>
 
       {untraceable > 0 && (
-        <Panel className="mt-8 border-l-2 border-l-active-solid px-5 py-4">
-          <p className="text-sm text-steel-600">
-            <span className="tnum font-medium text-steel-900">{untraceable}</span> units on hand
-            have no batch behind them — stock that was entered as an opening balance rather than
-            received against a delivery. They are usable, and they cannot be traced to a heat.
-            Anything received from now on can be.
+        <Panel className="mt-8 border-l-2 border-l-warning-500 px-5 py-4">
+          <p className="text-sm text-gray-600">
+            <span className="tnum font-medium text-gray-900">{untraceable}</span> units carry no
+            batch label and cannot be traced to a heat.
           </p>
         </Panel>
       )}
 
       <section className="mt-8">
-        <SectionHeading note={`${withLots.length} items · ${lotCount} batches`}>
+        <SectionHeading
+          note={`${itemsTracked.size} ${itemsTracked.size === 1 ? "item" : "items"} · ${lotCount} ${lotCount === 1 ? "batch" : "batches"}`}
+        >
           Stock by batch
         </SectionHeading>
 
@@ -363,9 +373,9 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
           filters={[
             { key: "all", label: "All", count: stockRows.length },
             { key: "free", label: "Free stock", count: counts.free },
-            { key: "committed", label: "Fully committed", count: counts.committed },
-            { key: "held", label: "On hold", count: counts.held },
-            { key: "untraced", label: "No batch", count: counts.untraced },
+            { key: "committed", label: "Nothing free", count: counts.committed },
+            { key: "held", label: "Quarantined", count: counts.held },
+            { key: "untraced", label: "No label", count: counts.untraced },
           ]}
           empty={{
             title: "No stock records yet",
@@ -373,14 +383,6 @@ export default async function InventoryPage(props: PageProps<"/inventory">) {
           }}
         />
       </section>
-
-      <Panel className="mt-8 px-5 py-4">
-        <p className="text-sm text-steel-500">
-          A batch&apos;s remaining quantity is not stored anywhere — it is the sum of every
-          movement that touched it. That is why these numbers cannot drift from the balance
-          above them: there is only one number, counted two ways.
-        </p>
-      </Panel>
     </div>
   );
 }

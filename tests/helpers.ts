@@ -27,6 +27,7 @@ import {
   stockLots,
   vendors,
   deliveryNotes,
+  attachments,
 } from "../src/db/schema";
 
 /**
@@ -44,6 +45,9 @@ export async function resetDatabase(): Promise<void> {
   await db.delete(alerts);
   // Delivery notes reference work orders, so they clear before them.
   await db.delete(deliveryNotes);
+  // Attachments reference orders, steps and routing steps — all three of which
+  // are deleted below.
+  await db.delete(attachments);
 
   await db.delete(operationDependencies);
   await db.delete(dispositionRecords);

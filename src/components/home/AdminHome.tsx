@@ -41,11 +41,6 @@ export function AdminHomeScreen({
       <PageHeader
         eyebrow="Setup"
         title={`Hello, ${firstName}`}
-        subtitle={
-          clean
-            ? "Nothing is missing from the setup. Below is what is waiting to be released."
-            : "What is waiting on you, and what is not configured yet. Each gap says what it will break."
-        }
       />
 
       <div className="mt-7 grid gap-4 sm:grid-cols-4">
@@ -80,16 +75,16 @@ export function AdminHomeScreen({
 
       {/* --- awaiting release ---------------------------------------------- */}
       <section className="mt-8">
-        <SectionHeading note="Nothing reaches the floor until it is released">
+        <SectionHeading>
           Waiting for you to release
         </SectionHeading>
         {data.awaitingRelease.length === 0 ? (
           <EmptyState
             title="Nothing planned is waiting"
-            hint="A new work order lands here the moment it is created, and stays until you release it."
+
           />
         ) : (
-          <Panel className="divide-y divide-steel-100 overflow-hidden border-l-2 border-l-active-solid">
+          <Panel className="divide-y divide-gray-100 overflow-hidden border-l-2 border-l-warning-500">
             {data.awaitingRelease.map((o) => (
               <div
                 key={o.id}
@@ -97,13 +92,13 @@ export function AdminHomeScreen({
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2.5">
-                    <span className="tnum text-sm font-medium text-navy-900">
+                    <span className="tnum text-sm font-medium text-gray-950">
                       {o.orderNumber}
                     </span>
-                    <span className="text-[0.9375rem] text-steel-700">{o.itemName}</span>
+                    <span className="text-[0.9375rem] text-gray-700">{o.itemName}</span>
                     <Chip tone="quiet">×{o.quantity}</Chip>
                   </div>
-                  <p className="mt-0.5 text-xs text-steel-400">
+                  <p className="mt-0.5 text-xs text-gray-400">
                     {o.customerName ?? "No customer"} · {formatRelativeDue(o.dueDate)}
                   </p>
                 </div>
@@ -118,24 +113,24 @@ export function AdminHomeScreen({
 
       {/* --- setup gaps ------------------------------------------------------ */}
       <section className="mt-8">
-        <SectionHeading note="Each of these fails on the floor, not here">
+        <SectionHeading>
           Missing setup
         </SectionHeading>
         {clean ? (
           <EmptyState
             title="Nothing missing"
-            hint="Every product has steps and a parts list, every worker has a station, and stock levels have thresholds."
+
           />
         ) : (
-          <Panel className="divide-y divide-steel-100 overflow-hidden">
+          <Panel className="divide-y divide-gray-100 overflow-hidden">
             {data.gaps.map((g) => (
               <div
                 key={g.key}
                 className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 px-5 py-4"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-[0.9375rem] font-medium text-steel-900">{g.title}</p>
-                  <p className="mt-1 text-sm text-steel-500">{g.detail}</p>
+                  <p className="text-[0.9375rem] font-medium text-gray-900">{g.title}</p>
+                  <p className="mt-1 text-sm text-gray-500">{g.detail}</p>
                 </div>
                 <LinkButton href={g.href}>
                   Fix it
@@ -149,30 +144,30 @@ export function AdminHomeScreen({
       {/* --- stock exceptions ------------------------------------------------ */}
       {data.stockExceptions.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="Free stock is on hand less reserved and held">
+          <SectionHeading>
             Stock worth looking at
           </SectionHeading>
-          <Panel className="divide-y divide-steel-100 overflow-hidden">
+          <Panel className="divide-y divide-gray-100 overflow-hidden">
             {data.stockExceptions.map((s) => (
               <div
                 key={s.itemId}
                 className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-5 py-3"
               >
                 <div className="min-w-0">
-                  <p className="text-sm text-steel-900">{s.name}</p>
-                  <p className="tnum mt-0.5 text-xs text-steel-400">{s.sku}</p>
+                  <p className="text-sm text-gray-900">{s.name}</p>
+                  <p className="tnum mt-0.5 text-xs text-gray-400">{s.sku}</p>
                 </div>
                 <div className="flex shrink-0 items-baseline gap-4 text-sm">
                   {s.held > 0 && <Chip tone="alert">{s.held} on hold</Chip>}
                   <span
                     className={`tnum font-medium ${
-                      s.free < 0 ? "text-blocked-fg" : "text-steel-900"
+                      s.free < 0 ? "text-danger-700" : "text-gray-900"
                     }`}
                   >
                     {s.free} {s.uom} free
                   </span>
                   {s.reorderPoint > 0 && (
-                    <span className="tnum text-xs text-steel-400">
+                    <span className="tnum text-xs text-gray-400">
                       reorder at {s.reorderPoint}
                     </span>
                   )}
@@ -183,26 +178,25 @@ export function AdminHomeScreen({
         </section>
       )}
 
-      <Panel className="mt-9 px-5 py-4">
-        <p className="text-sm text-steel-500">
-          Setup lives under{" "}
-          <Link href="/admin" className="font-medium text-navy-700 underline">
-            Setup
-          </Link>{" "}
-          — products and their steps, people and stations, reason codes, and work orders.
+      <div className="mt-9 flex flex-wrap gap-2">
+        <Link
+          href="/admin"
+          className="inline-flex min-h-9 items-center rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50"
+        >
+          Setup
+        </Link>
+        <Link
+          href="/alerts"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50"
+        >
+          Alerts
           {alertCount > 0 && (
-            <>
-              {" "}
-              There {alertCount === 1 ? "is" : "are"} also {alertCount} item
-              {alertCount === 1 ? "" : "s"} in{" "}
-              <Link href="/alerts" className="font-medium text-navy-700 underline">
-                Alerts
-              </Link>
-              .
-            </>
+            <span className="tnum rounded bg-danger-50 px-1.5 text-xs font-medium text-danger-700">
+              {alertCount}
+            </span>
           )}
-        </p>
-      </Panel>
+        </Link>
+      </div>
     </div>
   );
 }

@@ -30,9 +30,9 @@ export function TimesheetTable({
   const [editing, setEditing] = useState<number | null>(null);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-steel-200 bg-white">
+    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
       <table className="w-full text-sm">
-        <thead className="bg-steel-50 text-left text-xs text-steel-500">
+        <thead className="bg-gray-50 text-left text-xs text-gray-500">
           <tr>
             <th className="px-5 py-2.5 font-medium">Worker</th>
             <th className="px-5 py-2.5 font-medium">Step</th>
@@ -42,7 +42,7 @@ export function TimesheetTable({
             {canAdjust && <th className="px-5 py-2.5" />}
           </tr>
         </thead>
-        <tbody className="divide-y divide-steel-100">
+        <tbody className="divide-y divide-gray-100">
           {rows.map((row) => {
             const wasAdjusted = row.adjustments.length > 0;
             return (
@@ -50,25 +50,25 @@ export function TimesheetTable({
               // has no key, which React warns about on every render.
               <Fragment key={row.id}>
                 <tr>
-                  <td className="px-5 py-3 text-steel-900">{row.workerName}</td>
+                  <td className="px-5 py-3 text-gray-900">{row.workerName}</td>
                   <td className="px-5 py-3">
-                    <div className="text-steel-900">{row.stepName}</div>
-                    <div className="text-xs text-steel-400 tnum">{row.orderNumber}</div>
+                    <div className="text-gray-900">{row.stepName}</div>
+                    <div className="text-xs text-gray-400 tnum">{row.orderNumber}</div>
                   </td>
-                  <td className="px-5 py-3 text-steel-500">
+                  <td className="px-5 py-3 text-gray-500">
                     {formatWhen(new Date(row.startedAt))}
                   </td>
                   <td
                     className={`px-5 py-3 text-right tabular-nums ${
-                      wasAdjusted ? "text-steel-400 line-through" : "text-steel-900"
+                      wasAdjusted ? "text-gray-400 line-through" : "text-gray-900"
                     }`}
                   >
                     {formatDuration(row.originalSeconds)}
                   </td>
-                  <td className="px-5 py-3 text-right font-medium tabular-nums text-steel-900">
+                  <td className="px-5 py-3 text-right font-medium tabular-nums text-gray-900">
                     {formatDuration(row.chargedSeconds)}
                     {row.sharedWith > 1 && (
-                      <div className="text-xs font-normal tabular-nums text-steel-400">
+                      <div className="text-xs font-normal tabular-nums text-gray-400">
                         shared with {row.sharedWith - 1} other{" "}
                         {row.sharedWith - 1 === 1 ? "step" : "steps"}
                       </div>
@@ -88,9 +88,9 @@ export function TimesheetTable({
                 </tr>
 
                 {wasAdjusted && (
-                  <tr className="bg-steel-50">
+                  <tr className="bg-gray-50">
                     <td />
-                    <td colSpan={canAdjust ? 5 : 4} className="px-5 pb-3 text-xs text-steel-500">
+                    <td colSpan={canAdjust ? 5 : 4} className="px-5 pb-3 text-xs text-gray-500">
                       {row.adjustments.map((a, i) => (
                         <div key={i}>
                           Corrected to {formatDuration(a.newSeconds)} by {a.by} —{" "}
@@ -102,7 +102,7 @@ export function TimesheetTable({
                 )}
 
                 {editing === row.id && (
-                  <tr className="bg-steel-50">
+                  <tr className="bg-gray-50">
                     <td />
                     <td colSpan={canAdjust ? 5 : 4} className="px-5 py-3">
                       <AdjustForm
@@ -138,27 +138,24 @@ function AdjustForm({
 
   return (
     <div>
-      <p className="text-xs text-steel-500">
-        The original entry is kept. This records a correction against your name.
-      </p>
       <div className="mt-2 flex flex-wrap items-end gap-3">
         <label className="block">
-          <span className="text-xs text-steel-500">Minutes</span>
+          <span className="text-xs text-gray-500">Minutes</span>
           <input
             type="number"
             min={0}
             value={minutes}
             onChange={(e) => setMinutes(Number(e.target.value))}
-            className="mt-1 w-28 rounded-md border border-steel-300 bg-white px-3 text-sm min-h-11 tabular-nums"
+            className="mt-1 w-28 rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3 text-sm min-h-11 tabular-nums"
           />
         </label>
         <label className="block flex-1 min-w-48">
-          <span className="text-xs text-steel-500">Reason for the correction</span>
+          <span className="text-xs text-gray-500">Reason for the correction</span>
           <input
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. forgot to clock off at end of shift"
-            className="mt-1 w-full rounded-md border border-steel-300 bg-white px-3 text-sm min-h-11"
+            className="mt-1 w-full rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3 text-sm min-h-11"
           />
         </label>
         <Button
@@ -178,7 +175,7 @@ function AdjustForm({
           Cancel
         </Button>
       </div>
-      {error && <p className="mt-2 text-sm text-blocked-fg">{error}</p>}
+      {error && <p className="mt-2 text-sm text-danger-700">{error}</p>}
     </div>
   );
 }

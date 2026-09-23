@@ -43,18 +43,18 @@ function useAction() {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs text-steel-500">{label}</span>
+      <span className="text-xs text-gray-500">{label}</span>
       {children}
     </label>
   );
 }
 
 const inputClass =
-  "mt-1 w-full rounded-md border border-steel-300 bg-white px-3 text-sm min-h-11 placeholder:text-steel-400";
+  "mt-1 w-full rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3 text-sm min-h-11 placeholder:text-gray-400";
 
 function Feedback({ error, done, doneText }: { error: string | null; done: boolean; doneText: string }) {
-  if (error) return <p className="mt-2 text-sm text-blocked-fg">{error}</p>;
-  if (done) return <p className="mt-2 text-sm text-ok-fg">{doneText}</p>;
+  if (error) return <p className="mt-2 text-sm text-danger-700">{error}</p>;
+  if (done) return <p className="mt-2 text-sm text-success-700">{doneText}</p>;
   return null;
 }
 
@@ -139,12 +139,12 @@ export function NewItemForm() {
           <input type="number" min={0} value={reorderPoint} onChange={(e) => setReorderPoint(Number(e.target.value))} className={`${inputClass} tabular-nums`} />
         </Field>
       </div>
-      <label className="mt-3 flex min-h-11 items-center gap-2.5 text-sm text-steel-600">
+      <label className="mt-3 flex min-h-11 items-center gap-2.5 text-sm text-gray-600">
         <input
           type="checkbox"
           checked={isFinishedGood}
           onChange={(e) => setIsFinishedGood(e.target.checked)}
-          className="h-6 w-6 rounded border-steel-300"
+          className="h-6 w-6 rounded ring-gray-300"
         />
         This is a finished product we sell
       </label>
@@ -188,32 +188,43 @@ export function RoutingEditor({
   stations,
 }: {
   itemId: number;
-  steps: { id: number; sequence: number; name: string; stationName: string | null; expectedMinutes: number | null }[];
+  steps: {
+    id: number;
+    sequence: number;
+    name: string;
+    stationName: string | null;
+    expectedMinutes: number | null;
+    instructions?: string | null;
+  }[];
   stations: { id: number; name: string }[];
 }) {
   const { pending, error, done, run } = useAction();
   const [name, setName] = useState("");
   const [stationId, setStationId] = useState<number | null>(stations[0]?.id ?? null);
   const [minutes, setMinutes] = useState<number | "">("");
+  const [instructions, setInstructions] = useState("");
 
   return (
     <div>
-      <ol className="divide-y divide-steel-100 rounded-lg border border-steel-200 bg-white">
+      <ol className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
         {steps.length === 0 && (
-          <li className="px-5 py-6 text-center text-sm text-steel-400">
+          <li className="px-5 py-6 text-center text-sm text-gray-400">
             No steps yet. Add the first one below — this is the process for this product.
           </li>
         )}
         {steps.map((s, i) => (
           <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
             <div className="flex min-w-0 items-baseline gap-3">
-              <span className="w-5 text-right text-xs tabular-nums text-steel-400">{i + 1}</span>
+              <span className="w-5 text-right text-xs tabular-nums text-gray-400">{i + 1}</span>
               <div>
-                <p className="text-sm text-steel-900">{s.name}</p>
-                <p className="text-xs text-steel-400">
+                <p className="text-sm text-gray-900">{s.name}</p>
+                <p className="text-xs text-gray-400">
                   {s.stationName ?? "Unassigned"}
                   {s.expectedMinutes ? ` · ${s.expectedMinutes} min estimated` : ""}
                 </p>
+                {s.instructions && (
+                  <p className="mt-1 max-w-xl text-xs text-gray-600">{s.instructions}</p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -231,7 +242,7 @@ export function RoutingEditor({
         ))}
       </ol>
 
-      <div className="mt-4 grid gap-3 rounded-lg border border-steel-200 bg-steel-50 p-4 sm:grid-cols-[2fr_1fr_auto_auto] sm:items-end">
+      <div className="mt-4 grid gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-[2fr_1fr_auto_auto] sm:items-end">
         <Field label="Next step">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Deburr edges" className={inputClass} />
         </Field>
@@ -267,16 +278,29 @@ export function RoutingEditor({
                   name,
                   stationId,
                   expectedMinutes: minutes === "" ? null : minutes,
+                  instructions,
                 }),
               () => {
                 setName("");
                 setMinutes("");
+                setInstructions("");
               }
             )
           }
         >
           Add step
         </Button>
+        {/* Travels to the bench with the job, so the spec is where the work is. */}
+        <div className="sm:col-span-4">
+          <Field label="What to do at this step">
+            <input
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="e.g. Cut to 2400 x 1200, deburr all edges"
+              className={inputClass}
+            />
+          </Field>
+        </div>
         <div className="sm:col-span-4">
           <Feedback error={error} done={done} doneText="Step added." />
         </div>
@@ -305,19 +329,19 @@ export function BomEditor({
 
   return (
     <div>
-      <div className="divide-y divide-steel-100 rounded-lg border border-steel-200 bg-white">
+      <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
         {lines.length === 0 && (
-          <p className="px-5 py-6 text-center text-sm text-steel-400">
+          <p className="px-5 py-6 text-center text-sm text-gray-400">
             Nothing listed yet. Add what this product is built from.
           </p>
         )}
         {lines.map((l) => (
           <div key={l.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
             <div>
-              <p className="text-sm text-steel-900">
+              <p className="text-sm text-gray-900">
                 <span className="tabular-nums">{l.quantity}×</span> {l.componentName}
               </p>
-              <p className="text-xs text-steel-400">
+              <p className="text-xs text-gray-400">
                 {l.componentSku}
                 {l.consumedAtStepName
                   ? ` · taken from stock at "${l.consumedAtStepName}"`
@@ -331,7 +355,7 @@ export function BomEditor({
         ))}
       </div>
 
-      <div className="mt-4 grid gap-3 rounded-lg border border-steel-200 bg-steel-50 p-4 sm:grid-cols-[2fr_auto_2fr_auto] sm:items-end">
+      <div className="mt-4 grid gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-[2fr_auto_2fr_auto] sm:items-end">
         <Field label="Component">
           <select
             value={componentItemId ?? ""}

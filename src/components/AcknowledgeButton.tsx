@@ -22,7 +22,7 @@ export function AcknowledgeButton({ alertId }: { alertId: number }) {
       >
         {pending ? "Clearing…" : "Got it"}
       </Button>
-      {error && <span className="text-xs text-blocked-fg">{error}</span>}
+      {error && <span className="text-xs text-danger-700">{error}</span>}
     </span>
   );
 }

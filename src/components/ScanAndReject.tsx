@@ -92,13 +92,13 @@ export function ScanAndReject() {
       />
 
       {lot && (
-        <div className="mt-4 border-t border-steel-100 pt-4">
+        <div className="mt-4 border-t border-gray-100 pt-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="font-medium text-steel-900">
-                {lot.itemName} <span className="font-mono text-xs text-steel-400">{lot.sku}</span>
+              <p className="font-medium text-gray-900">
+                {lot.itemName} <span className="font-mono text-xs text-gray-400">{lot.sku}</span>
               </p>
-              <p className="mt-0.5 text-sm text-steel-500">
+              <p className="mt-0.5 text-sm text-gray-500">
                 Batch <span className="tnum font-mono">{lot.batchNumber}</span>
                 {lot.heatNumber && (
                   <>
@@ -107,11 +107,11 @@ export function ScanAndReject() {
                   </>
                 )}
               </p>
-              <p className="mt-0.5 text-sm text-steel-500">
+              <p className="mt-0.5 text-sm text-gray-500">
                 {lot.locationName}
                 {lot.storageLocation ? ` · ${lot.storageLocation}` : ""}
               </p>
-              <p className="tnum mt-2 text-sm font-medium text-steel-900">
+              <p className="tnum mt-2 text-sm font-medium text-gray-900">
                 {lot.remaining} {lot.unit} left on this batch
               </p>
             </div>
@@ -119,27 +119,27 @@ export function ScanAndReject() {
           </div>
 
           {lot.remaining <= 0 ? (
-            <p className="mt-3 text-sm text-steel-500">
+            <p className="mt-3 text-sm text-gray-500">
               Nothing left on this batch — there is nothing to write off.
             </p>
           ) : (
             <>
               <div className="mt-4 flex flex-wrap items-end gap-3">
-                <label className="text-sm text-steel-600">
+                <label className="text-sm text-gray-600">
                   How many are damaged
                   <input
                     type="number"
                     min={1}
                     max={lot.remaining}
-                    className="tnum mt-1 block min-h-11 w-28 rounded-md border border-steel-300 bg-white px-3"
+                    className="tnum mt-1 block min-h-11 w-28 rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3"
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
                   />
                 </label>
-                <label className="min-w-64 flex-1 text-sm text-steel-600">
+                <label className="min-w-64 flex-1 text-sm text-gray-600">
                   What is wrong with it
                   <input
-                    className="mt-1 block min-h-11 w-full rounded-md border border-steel-300 bg-white px-3"
+                    className="mt-1 block min-h-11 w-full rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="e.g. Water damage in the bay, corner crushed"
@@ -153,7 +153,7 @@ export function ScanAndReject() {
                 </Button>
               </div>
 
-              <p className="mt-2.5 text-xs text-steel-400">
+              <p className="mt-2.5 text-xs text-gray-400">
                 This removes the units from stock for good. If a job had them committed,
                 that commitment is released and the shortage shows on Materials.
               </p>
@@ -165,18 +165,12 @@ export function ScanAndReject() {
       {message && (
         <p
           role={message.error ? "alert" : "status"}
-          className={`mt-3 text-sm ${message.error ? "text-blocked-fg" : "text-ok-fg"}`}
+          className={`mt-3 text-sm ${message.error ? "text-danger-700" : "text-success-700"}`}
         >
           {message.text}
         </p>
       )}
 
-      {!lot && !message && (
-        <p className="mt-2 text-xs text-steel-400">
-          Scanning tells you what the pallet is and how much is left. Writing it off is a
-          separate press.
-        </p>
-      )}
     </Panel>
   );
 }

@@ -3,12 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createMadeToOrder } from "@/app/actions/admin";
+import { CustomerField } from "@/components/CustomerField";
+import { DrawingField, attachDrawing } from "@/components/DrawingField";
 import { Button, Panel } from "@/components/ui";
 
 type Option = { id: number; label: string };
 
 const input =
-  "mt-1 min-h-11 w-full rounded-md border border-steel-300 bg-white px-3 text-sm";
+  "mt-1 min-h-11 w-full rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-3 text-sm";
 
 /**
  * Raise an order for something that has never been built.
@@ -21,7 +23,7 @@ export type ProductSpec = {
   id: number;
   label: string;
   materials: { itemId: number; quantity: number; stepIndex: number }[];
-  steps: { name: string; stationId: number | null }[];
+  steps: { name: string; stationId: number | null; instructions?: string | null }[];
 };
 
 export function NewOrderForm({
@@ -29,15 +31,12 @@ export function NewOrderForm({
   parts,
   stations,
   workTypes,
-  products,
 }: {
   customers: Option[];
   parts: Option[];
   stations: Option[];
   /** The kinds of work this shop does, for the step dropdown. */
   workTypes: string[];
-  /** Things built before — pick one to repeat its specification. */
-  products: ProductSpec[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -49,35 +48,16 @@ export function NewOrderForm({
   const [sku, setSku] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [dueDate, setDueDate] = useState("");
+  const [dimensions, setDimensions] = useState("");
+  const [materialType, setMaterialType] = useState("");
+  const [drawing, setDrawing] = useState<File | null>(null);
 
   const [materials, setMaterials] = useState<
     { itemId: number; quantity: number; stepIndex: number }[]
   >([{ itemId: parts[0]?.id ?? 0, quantity: 1, stepIndex: 0 }]);
-  const [steps, setSteps] = useState<{ name: string; stationId: number | null }[]>([
-    { name: "", stationId: stations[0]?.id ?? null },
-  ]);
-
-  /**
-   * Repeat a product built before.
-   *
-   * Copies the specification, not the order: the steps and the parts list are
-   * filled in and remain editable, because the second order for a thing is
-   * usually the first one with something changed.
-   */
-  function repeat(id: number) {
-    const spec = products.find((p) => p.id === id);
-    if (!spec) return;
-    setProductName(spec.label.replace(/\s*\([^)]*\)\s*$/, ""));
-    setSku("");
-    setSteps(spec.steps.length ? spec.steps : [{ name: "", stationId: stations[0]?.id ?? null }]);
-    setMaterials(
-      spec.materials.length
-        ? spec.materials
-        : [{ itemId: parts[0]?.id ?? 0, quantity: 1, stepIndex: 0 }]
-    );
-    setDone(null);
-    setError(null);
-  }
+  const [steps, setSteps] = useState<
+    { name: string; stationId: number | null; instructions: string }[]
+  >([{ name: "", stationId: stations[0]?.id ?? null, instructions: "" }]);
 
   function submit() {
     if (pending) return;
@@ -90,11 +70,18 @@ export function NewOrderForm({
         sku,
         quantity,
         dueDate: dueDate || null,
+        dimensions: dimensions.trim() || null,
+        materialType: materialType.trim() || null,
         materials,
         steps,
       });
       if (!res.ok) {
         setError(res.error);
+        return;
+      }
+      const failed = await attachDrawing(res.orderId, drawing);
+      if (failed) {
+        setError(failed);
         return;
       }
       // Go to the order that was just raised. Clearing the form and staying put
@@ -107,27 +94,14 @@ export function NewOrderForm({
 
   return (
     <Panel className="p-5">
-      {products.length > 0 && (
-        <label className="mb-5 block border-b border-steel-100 pb-5">
-          <span className="text-xs text-steel-500">Repeat something built before</span>
-          <select
-            className={input}
-            defaultValue=""
-            onChange={(e) => e.target.value && repeat(Number(e.target.value))}
-          >
-            <option value="">Start from scratch</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+      <h2 className="text-sm font-semibold text-gray-950">Something we have never built</h2>
+      <p className="mt-0.5 mb-4 text-sm text-gray-500">
+        Describe it once here and it becomes a product you can reorder.
+      </p>
 
       <div className="grid gap-3 sm:grid-cols-4">
         <label className="block sm:col-span-2">
-          <span className="text-xs text-steel-500">What are we building?</span>
+          <span className="text-xs text-gray-500">What are we building?</span>
           <input
             className={input}
             value={productName}
@@ -136,7 +110,7 @@ export function NewOrderForm({
           />
         </label>
         <label className="block">
-          <span className="text-xs text-steel-500">Part number</span>
+          <span className="text-xs text-gray-500">Part number</span>
           <input
             className={`${input} tnum`}
             value={sku}
@@ -145,7 +119,7 @@ export function NewOrderForm({
           />
         </label>
         <label className="block">
-          <span className="text-xs text-steel-500">How many</span>
+          <span className="text-xs text-gray-500">How many</span>
           <input
             type="number"
             min={1}
@@ -154,23 +128,9 @@ export function NewOrderForm({
             onChange={(e) => setQuantity(Number(e.target.value))}
           />
         </label>
+        <CustomerField customers={customers} value={customerId} onChange={setCustomerId} />
         <label className="block sm:col-span-2">
-          <span className="text-xs text-steel-500">Customer</span>
-          <select
-            className={input}
-            value={customerId ?? ""}
-            onChange={(e) => setCustomerId(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">None</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block sm:col-span-2">
-          <span className="text-xs text-steel-500">Wanted by</span>
+          <span className="text-xs text-gray-500">Due date</span>
           <input
             type="date"
             className={input}
@@ -178,11 +138,32 @@ export function NewOrderForm({
             onChange={(e) => setDueDate(e.target.value)}
           />
         </label>
+        <label className="block sm:col-span-2">
+          <span className="text-xs text-gray-500">Size</span>
+          <input
+            className={input}
+            value={dimensions}
+            onChange={(e) => setDimensions(e.target.value)}
+            placeholder="3000 CFM · 2400 × 1200 × 1800 mm"
+          />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="text-xs text-gray-500">Material</span>
+          <input
+            className={input}
+            value={materialType}
+            onChange={(e) => setMaterialType(e.target.value)}
+            placeholder="304 stainless, 16ga"
+          />
+        </label>
+        <div className="sm:col-span-4">
+          <DrawingField file={drawing} onChange={setDrawing} />
+        </div>
       </div>
 
       {/* --- Bill of materials --- */}
       <div className="mt-6">
-        <p className="text-sm font-medium text-steel-800">Materials for one unit, and where they are used</p>
+        <p className="text-sm font-medium text-gray-800">Materials for one unit, and where they are used</p>
         <div className="mt-2 space-y-2">
           {materials.map((m, i) => (
             <div key={i} className="flex flex-wrap items-end gap-2">
@@ -257,7 +238,7 @@ export function NewOrderForm({
 
       {/* --- Routing --- */}
       <div className="mt-6">
-        <p className="text-sm font-medium text-steel-800">Steps, in order</p>
+        <p className="text-sm font-medium text-gray-800">Steps, in order</p>
         <div className="mt-2 space-y-2">
           {steps.map((s, i) => (
             <div key={i} className="flex flex-wrap items-end gap-2">
@@ -322,13 +303,31 @@ export function NewOrderForm({
               <Button onClick={() => setSteps((old) => old.filter((_, j) => j !== i))}>
                 Remove
               </Button>
+              {/* The spec for THIS operation. It follows the job to the bench, so a
+                  cut list stays at the saw instead of on the unit's front page. */}
+              <label className="w-full">
+                <span className="text-xs text-gray-500">What to do at this step</span>
+                <input
+                  className={input}
+                  value={s.instructions}
+                  placeholder="Cut to 2400 × 1200, deburr all edges"
+                  onChange={(e) =>
+                    setSteps((old) =>
+                      old.map((x, j) => (j === i ? { ...x, instructions: e.target.value } : x))
+                    )
+                  }
+                />
+              </label>
             </div>
           ))}
         </div>
         <div className="mt-2">
           <Button
             onClick={() =>
-              setSteps((old) => [...old, { name: "", stationId: stations[0]?.id ?? null }])
+              setSteps((old) => [
+                ...old,
+                { name: "", stationId: stations[0]?.id ?? null, instructions: "" },
+              ])
             }
           >
             Add step
@@ -341,12 +340,12 @@ export function NewOrderForm({
           {pending ? "Creating…" : "Create order"}
         </Button>
         {error && (
-          <p role="alert" className="text-sm text-blocked-fg">
+          <p role="alert" className="text-sm text-danger-700">
             {error}
           </p>
         )}
         {done && (
-          <p role="status" className="text-sm text-ok-fg">
+          <p role="status" className="text-sm text-success-700">
             {done}
           </p>
         )}

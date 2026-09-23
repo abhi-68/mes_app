@@ -10,6 +10,7 @@ const KIND_LABEL: Record<Alert["kind"], string> = {
   ASSIGNED_TO_YOU: "Given to you",
   MATERIAL_SHORT: "Material short",
   RUNNING_LATE: "Running long",
+  ORDER_AT_RISK: "Order at risk",
   BELOW_REORDER: "Reorder",
 };
 
@@ -32,11 +33,6 @@ export default async function AlertsPage() {
       <PageHeader
         eyebrow="Alerts"
         title={manager ? "Needs someone" : "Your alerts"}
-        subtitle={
-          manager
-            ? "Things that happened and things that are true right now. Blocked steps and arriving parts are recorded when they happen; shortages and overruns are worked out fresh each time you open this, so they disappear by themselves once they are fixed."
-            : "What has changed at your station. A part arriving is the one worth acting on straight away."
-        }
       />
 
       <div className="mt-7 grid gap-4 sm:grid-cols-3">
@@ -63,14 +59,14 @@ export default async function AlertsPage() {
         <div className="mt-8">
           <EmptyState
             title="Nothing to tell you"
-            hint="Nothing is blocked, nothing is short, and no step has run past its estimate."
+
           />
         </div>
       )}
 
       {info.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="A supervisor put your name on these">
+          <SectionHeading>
             Handed to you
           </SectionHeading>
           <div className="space-y-2.5">
@@ -83,7 +79,7 @@ export default async function AlertsPage() {
 
       {good.length > 0 && (
         <section className="mt-8">
-          <SectionHeading note="Someone can get on with this now">You can start</SectionHeading>
+          <SectionHeading>You can start</SectionHeading>
           <div className="space-y-2.5">
             {good.map((a) => (
               <AlertRow key={a.key} alert={a} />
@@ -95,7 +91,7 @@ export default async function AlertsPage() {
       {attention.length > 0 && (
         <section className="mt-8">
           <SectionHeading
-            note={manager ? "Nobody else is going to clear these" : "Your supervisor sees these too"}
+            note={undefined}
           >
             Needs attention
           </SectionHeading>
@@ -106,15 +102,6 @@ export default async function AlertsPage() {
           </div>
         </section>
       )}
-
-      <Panel className="mt-10 px-5 py-4">
-        <p className="text-sm leading-relaxed text-steel-500">
-          Nothing here is emailed or texted. This page and the count beside it in the menu are
-          read when someone opens the app — no one is interrupted at home, and nothing goes
-          stale. Who should be chased, how, and how long a step should sit before it escalates
-          are decisions for a supervisor to make about their own floor.
-        </p>
-      </Panel>
     </div>
   );
 }
@@ -125,28 +112,28 @@ function AlertRow({ alert }: { alert: Alert }) {
   return (
     <Panel
       className={`flex flex-wrap items-start justify-between gap-x-6 gap-y-3 overflow-hidden border-l-2 px-5 py-4 ${
-        mine ? "border-l-mine-solid" : good ? "border-l-ok-solid" : "border-l-blocked-solid"
+        mine ? "border-l-info-600" : good ? "border-l-success-600" : "border-l-danger-600"
       }`}
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
           <Chip tone={good || mine ? "quiet" : "alert"}>{KIND_LABEL[alert.kind]}</Chip>
-          <p className="text-[0.9375rem] font-medium text-steel-900">{alert.title}</p>
+          <p className="text-[0.9375rem] font-medium text-gray-900">{alert.title}</p>
         </div>
         {alert.detail && (
-          <p className="mt-1.5 text-sm leading-relaxed text-steel-500">{alert.detail}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-gray-500">{alert.detail}</p>
         )}
-        <p className="mt-1.5 text-xs text-steel-400">
+        <p className="mt-1.5 text-xs text-gray-400">
           {alert.stationName ?? "No station"}
           {alert.orderNumber && (
             <>
-              <span className="text-steel-300"> · </span>
-              <Link href={`/orders/${alert.workOrderId}`} className="tnum underline underline-offset-2 hover:text-navy-800">
+              <span className="text-gray-300"> · </span>
+              <Link href={`/orders/${alert.workOrderId}`} className="tnum underline underline-offset-2 hover:text-primary-600">
                 {alert.orderNumber}
               </Link>
             </>
           )}
-          <span className="text-steel-300"> · </span>
+          <span className="text-gray-300"> · </span>
           {timeAgo(alert.at)}
         </p>
       </div>
@@ -155,7 +142,7 @@ function AlertRow({ alert }: { alert: Alert }) {
         {alert.workOrderId && (
           <Link
             href={`/orders/${alert.workOrderId}`}
-            className="inline-flex min-h-11 items-center rounded-lg border border-steel-300 bg-white px-4 text-sm font-medium text-steel-700 shadow-card transition-colors hover:border-steel-400 hover:bg-steel-50"
+            className="inline-flex min-h-11 items-center rounded-lg border-0 bg-white ring-1 ring-inset ring-gray-300 px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50"
           >
             Open unit
           </Link>
@@ -163,7 +150,7 @@ function AlertRow({ alert }: { alert: Alert }) {
         {alert.acknowledgeable && alert.id !== null ? (
           <AcknowledgeButton alertId={alert.id} />
         ) : (
-          <span className="text-xs text-steel-400">Clears itself</span>
+          <span className="text-xs text-gray-400">Clears itself</span>
         )}
       </div>
     </Panel>

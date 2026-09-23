@@ -2,10 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { asc, eq, isNull, desc } from "drizzle-orm";
 import { db } from "@/db";
-import { items, customers, workOrders, stations, routingSteps, bomLines } from "@/db/schema";
+import { items, customers, workOrders, stations, routingSteps } from "@/db/schema";
 import { getCurrentUser, isManager } from "@/lib/session";
 import { Panel, PageHeader, SectionHeading, StatusPill, formatRelativeDue } from "@/components/ui";
 import { NewOrderForm } from "@/components/NewOrderForm";
+import { RepeatOrderForm } from "@/components/RepeatOrderForm";
 
 export default async function NewWorkOrderPage() {
   const user = await getCurrentUser();
@@ -14,7 +15,7 @@ export default async function NewWorkOrderPage() {
   // it does not live under /admin where the proxy admits admins only.
   if (!isManager(user.role)) redirect("/");
 
-  const [products, customerRows, recent, partRows, stationRows, workTypeRows, allBom, allSteps] =
+  const [products, customerRows, recent, partRows, stationRows, workTypeRows] =
     await Promise.all([
     db
       .select({ id: items.id, name: items.name, sku: items.sku })
@@ -44,76 +45,38 @@ export default async function NewWorkOrderPage() {
       .selectDistinct({ name: routingSteps.name })
       .from(routingSteps)
       .orderBy(asc(routingSteps.name)),
-    db
-      .select({
-        itemId: bomLines.parentItemId,
-        componentItemId: bomLines.componentItemId,
-        quantity: bomLines.quantity,
-        stepId: bomLines.consumedAtRoutingStepId,
-      })
-      .from(bomLines),
-    db
-      .select({
-        id: routingSteps.id,
-        itemId: routingSteps.itemId,
-        name: routingSteps.name,
-        stationId: routingSteps.stationId,
-        sequence: routingSteps.sequence,
-      })
-      .from(routingSteps)
-      .orderBy(asc(routingSteps.itemId), asc(routingSteps.sequence)),
   ]);
-
-  /**
-   * Every product that can be repeated, with its specification attached.
-   *
-   * Assembled here rather than fetched on demand because the list is small and a
-   * dropdown that has to wait for a round trip before it can fill the form is a
-   * dropdown people stop using.
-   */
-  const productSpecs = products.map((p) => {
-    const steps = allSteps.filter((st) => st.itemId === p.id);
-    const stepIndex = new Map(steps.map((st, i) => [st.id, i]));
-    return {
-      id: p.id,
-      label: `${p.name} (${p.sku})`,
-      steps: steps.map((st) => ({ name: st.name, stationId: st.stationId })),
-      materials: allBom
-        .filter((b) => b.itemId === p.id)
-        .map((b) => ({
-          itemId: b.componentItemId,
-          quantity: b.quantity,
-          stepIndex: b.stepId !== null ? stepIndex.get(b.stepId) ?? 0 : 0,
-        })),
-    };
-  });
 
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-9">
       <PageHeader
         title="Raise a work order"
-        subtitle="Pick a product and quantity. Every step and every sub-assembly order is created for you from that product's setup."
+        subtitle="Steps and sub-assembly orders are created from the product."
         actions={
           <Link
             href="/orders"
-            className="inline-flex min-h-11 items-center text-sm text-steel-500 hover:text-navy-900"
+            className="inline-flex min-h-11 items-center text-sm text-gray-500 hover:text-gray-950"
           >
             Back to setup
           </Link>
         }
       />
 
-      {/* One form, not two. Made to order is the common case here — the product
-          does not exist yet — and repeating a previous one is the dropdown at the
-          top of this same form, so a second "repeat order" form beside it only
-          gave two buttons that did the same job. */}
-      <section className="mt-6">
+      {/* Two forms because they do two different things. This one reuses a
+          product; the one below defines a new one. Raising a repeat through the
+          made-to-order form clones the product instead, and a catalogue of
+          near-identical part numbers is how reports stop adding up. */}
+      <section className="mt-6 space-y-6">
+        <RepeatOrderForm
+          products={products.map((p) => ({ id: p.id, label: `${p.name} (${p.sku})` }))}
+          customers={customerRows.map((c) => ({ id: c.id, label: c.name }))}
+        />
+
         <NewOrderForm
           customers={customerRows.map((c) => ({ id: c.id, label: c.name }))}
           parts={partRows.map((p) => ({ id: p.id, label: `${p.name} (${p.sku})` }))}
           stations={stationRows.map((s) => ({ id: s.id, label: s.name }))}
           workTypes={workTypeRows.map((w) => w.name)}
-          products={productSpecs}
         />
       </section>
 
@@ -122,16 +85,16 @@ export default async function NewWorkOrderPage() {
       {recent.length > 0 && (
       <section className="mt-10">
         <SectionHeading>Recently raised</SectionHeading>
-        <Panel className="divide-y divide-steel-100">
+        <Panel className="divide-y divide-gray-100">
           {recent.map((o) => (
             <Link
               key={o.id}
               href={`/orders/${o.id}`}
-              className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-steel-50"
+              className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-gray-50"
             >
               <div>
-                <p className="text-sm font-medium text-steel-900 tnum">{o.orderNumber}</p>
-                <p className="text-xs text-steel-400">
+                <p className="text-sm font-medium text-gray-900 tnum">{o.orderNumber}</p>
+                <p className="text-xs text-gray-400">
                   {o.item.name} · Qty {o.quantity} · {formatRelativeDue(o.dueDate)}
                 </p>
               </div>

@@ -22,10 +22,12 @@ import {
   reserveForRequirement,
   receiveStock,
   coverageFor,
+  availableNow,
   CommandError,
   type Exec,
 } from "@/lib/inventory";
 import { blockersFor } from "@/lib/dependencies";
+import { outstandingPickCount } from "@/lib/picking";
 import { deliverCompletedSubAssembly, satisfiedQuantityFor } from "@/lib/outputs";
 import {
   raiseAlert,
@@ -148,42 +150,25 @@ export async function startTask(taskId: number, commandId: string): Promise<Acti
         );
         if (outstanding === 0) continue;
 
-        // Reserve whatever is still uncovered, then draw the whole outstanding amount.
-        if (cover.activeReserved < outstanding) {
-          await reserveForRequirement(
-            {
-              commandId: `${commandId}:reserve:${req.id}`,
-              requirementId: req.id,
-              itemId: req.itemId,
-              locationId,
-              quantity: outstanding - cover.activeReserved,
-            },
-            exec
-          );
-        }
-
-        const after = await coverageFor(req.id, exec);
-        const stillUncovered = Math.max(
-          0,
-          req.requiredQty - after.netIssued - after.activeReserved - fromSubAssembly
-        );
-        if (stillUncovered > 0) {
+        // Nothing is reserved or issued here. Start no longer commits stock: the
+        // handler collects it and scans each batch they lift, and that is what
+        // moves it. All that is left to decide is which of the two refusals the
+        // worker gets — go and fetch it, or it is not in the building.
+        const free = await availableNow(req.itemId, locationId, exec);
+        if (free + cover.activeReserved < outstanding) {
           throw new CommandError(
-            `Short ${stillUncovered} of the material this step needs`,
+            `Short ${outstanding - free - cover.activeReserved} of the material this step needs`,
             "INSUFFICIENT_STOCK"
           );
         }
 
-        // DELIBERATELY NOT ISSUED HERE.
-        //
-        // Starting a step used to draw the material in the same breath, choosing
-        // the oldest batch on the handler's behalf. Nobody walked to the rack, so
-        // nobody confirmed which pallet was actually taken — and the trace recorded
-        // a guess as a fact.
-        //
-        // Start now commits the stock and stops. The handler collects it, scans
-        // each batch they lift, and THAT issues it. The material leaves the shelf
-        // at the moment it physically leaves the shelf.
+        // The stock exists, but it is on the rack rather than in their hands.
+        // Starting the clock now would put walking and fetching into the build
+        // time, and the batch actually taken would be recorded after the fact.
+        throw new CommandError(
+          `Collect the material first — ${outstanding} still to scan`,
+          "MATERIAL_NOT_COLLECTED"
+        );
       }
 
       await tx
@@ -257,6 +242,17 @@ export async function completeTask(taskId: number, note?: string): Promise<Actio
   return wrap(async () => {
     const { user, task } = await authorizeTask(taskId);
     if (task.status === "DONE") return;
+
+    // Start already refuses while material is on the rack, but this is the moment
+    // the books say the part was built. A step finished with its material never
+    // drawn leaves stock that was physically used still sitting on the balance.
+    const stillToCollect = await outstandingPickCount(taskId);
+    if (stillToCollect > 0) {
+      throw new CommandError(
+        `Collect the material first — ${stillToCollect} still to scan`,
+        "MATERIAL_NOT_COLLECTED"
+      );
+    }
 
     await db.transaction(async (tx) => {
       const now = new Date();

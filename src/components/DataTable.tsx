@@ -70,15 +70,15 @@ export function DataTable<T>({
                   key={f.key}
                   href={href({ filter: f.key })}
                   aria-current={active ? "page" : undefined}
-                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-md px-4 text-sm font-medium transition-colors ${
+                  className={`inline-flex min-h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors ${
                     active
-                      ? "bg-navy-800 text-white"
-                      : "border border-steel-300 bg-white text-steel-600 hover:bg-steel-50"
+                      ? "bg-gray-900 font-medium text-white"
+                      : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                   }`}
                 >
                   {f.label}
                   {f.count !== undefined && (
-                    <span className={`tnum text-xs ${active ? "text-white/70" : "text-steel-400"}`}>
+                    <span className={`tnum text-xs ${active ? "text-white/60" : "text-gray-400"}`}>
                       {f.count}
                     </span>
                   )}
@@ -93,7 +93,7 @@ export function DataTable<T>({
         {action && (
           <Link
             href={action.href}
-            className="inline-flex min-h-11 items-center rounded-md bg-navy-800 px-4 text-sm font-medium text-white transition-colors hover:bg-navy-900"
+            className="inline-flex min-h-8 items-center rounded-md bg-gray-900 px-3 text-[13px] font-medium text-white transition-colors hover:bg-gray-800"
           >
             {action.label}
           </Link>
@@ -112,18 +112,18 @@ export function DataTable<T>({
           defaultValue={query.q}
           placeholder={searchPlaceholder ?? "Search"}
           aria-label="Search this list"
-          className="min-h-11 min-w-56 flex-1 rounded-md border border-steel-300 bg-white px-3 text-sm"
+          className="min-h-8 min-w-56 flex-1 rounded-md border border-gray-200 bg-white px-2.5 text-[13px]"
         />
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center rounded-md border border-steel-300 bg-white px-4 text-sm font-medium text-steel-700 hover:bg-steel-50"
+          className="inline-flex min-h-8 items-center rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-700 hover:bg-gray-50"
         >
           Search
         </button>
         {query.q && (
           <Link
             href={href({ q: "" })}
-            className="inline-flex min-h-11 items-center rounded-md border border-steel-300 bg-white px-4 text-sm text-steel-600 hover:bg-steel-50"
+            className="inline-flex min-h-8 items-center rounded-md border border-gray-200 bg-white px-3 text-[13px] text-gray-600 hover:bg-gray-50"
           >
             Clear
           </Link>
@@ -146,8 +146,8 @@ export function DataTable<T>({
           <div className="overflow-x-auto">
             <table className="w-full">
               {caption && <caption className="sr-only">{caption}</caption>}
-              <thead className="bg-steel-50/60">
-                <tr className="border-b border-steel-200">
+              <thead className="bg-gray-50/60">
+                <tr className="border-b border-gray-200">
                   {columns.map((c) => {
                     const active = query.sort === c.key;
                     const cls = `${TH} ${c.align === "right" ? "text-right" : ""} ${
@@ -173,10 +173,10 @@ export function DataTable<T>({
                              a minimum width, and these are tapped on a tablet. */
                           className={`inline-flex min-h-11 min-w-11 items-center gap-1 ${
                             c.align === "right" ? "justify-end" : ""
-                          } ${active ? "text-navy-800" : "hover:text-steel-600"}`}
+                          } ${active ? "text-gray-800" : "hover:text-gray-600"}`}
                         >
                           {c.label}
-                          <span aria-hidden className={active ? "" : "text-steel-300"}>
+                          <span aria-hidden className={active ? "" : "text-gray-300"}>
                             {active ? (query.dir === "asc" ? "▲" : "▼") : "↕"}
                           </span>
                         </Link>
@@ -208,7 +208,7 @@ export function DataTable<T>({
 
       {/* Where you are, and how to move */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="tnum text-xs text-steel-500">
+        <p className="tnum text-xs text-gray-500">
           {page.total === 0
             ? "No rows"
             : `${page.from}–${page.to} of ${page.total}`}
@@ -216,16 +216,16 @@ export function DataTable<T>({
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-steel-400">Per page</span>
+            <span className="text-xs text-gray-400">Per page</span>
             {PER_PAGE_CHOICES.map((n) => (
               <Link
                 key={n}
                 href={href({ perPage: n })}
                 aria-current={page.perPage === n ? "true" : undefined}
-                className={`tnum inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 text-xs ${
+                className={`tnum inline-flex min-h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs ${
                   page.perPage === n
-                    ? "bg-navy-800 font-semibold text-white"
-                    : "border border-steel-300 bg-white text-steel-600 hover:bg-steel-50"
+                    ? "bg-gray-900 font-medium text-white"
+                    : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 {n}
@@ -238,7 +238,7 @@ export function DataTable<T>({
               <PageLink href={href({ page: page.page - 1 })} disabled={page.page <= 1}>
                 Previous
               </PageLink>
-              <span className="tnum px-1 text-xs text-steel-500">
+              <span className="tnum px-1 text-xs text-gray-500">
                 {page.page} / {page.pageCount}
               </span>
               <PageLink
@@ -265,16 +265,16 @@ function PageLink({
   children: ReactNode;
 }) {
   const base =
-    "inline-flex min-h-11 items-center rounded-md border px-3 text-xs font-medium transition-colors";
+    "inline-flex min-h-11 items-center rounded-lg border px-3 text-xs font-medium transition-colors";
   if (disabled) {
     return (
-      <span aria-disabled className={`${base} border-steel-200 bg-steel-50 text-steel-300`}>
+      <span aria-disabled className={`${base} border-gray-200 bg-gray-50 text-gray-300`}>
         {children}
       </span>
     );
   }
   return (
-    <Link href={href} className={`${base} border-steel-300 bg-white text-steel-600 hover:bg-steel-50`}>
+    <Link href={href} className={`${base} ring-gray-300 bg-white text-gray-600 hover:bg-gray-50`}>
       {children}
     </Link>
   );

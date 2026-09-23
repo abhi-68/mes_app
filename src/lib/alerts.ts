@@ -28,6 +28,7 @@ import {
 } from "@/db/schema";
 import type { Exec } from "@/lib/inventory";
 import { blockersForOperations } from "@/lib/dependencies";
+import { scheduleOpenWork, plantLateCauses } from "@/lib/schedule-data";
 import type { SessionUser } from "@/lib/session";
 
 /** A step is "late" once it has run this many times its expected minutes. */
@@ -39,6 +40,7 @@ export type AlertKind =
   | "ASSIGNED_TO_YOU"
   | "MATERIAL_SHORT"
   | "RUNNING_LATE"
+  | "ORDER_AT_RISK"
   | "BELOW_REORDER";
 
 export type Alert = {
@@ -298,6 +300,7 @@ export async function alertsFor(user: SessionUser, exec: Exec = {}): Promise<Ale
   // --- derived conditions --------------------------------------------------
   out.push(...(await materialShortAlerts(user, exec)));
   out.push(...(await runningLateAlerts(user, exec)));
+  out.push(...(await scheduleRiskAlerts(user, exec)));
   out.push(...(await belowReorderAlerts(user, exec)));
 
   return out.sort((a, b) => b.at.getTime() - a.at.getTime());
@@ -483,4 +486,92 @@ async function runningLateAlerts(user: SessionUser, exec: Exec = {}): Promise<Al
     });
   }
   return result;
+}
+
+/**
+ * The step that is about to make an order late — or has just started to.
+ *
+ * Not "this step is waiting", which is ordinary and constant. This is the head of
+ * a chain that has run out of room: nothing upstream of it is in trouble, so it is
+ * the thing to go and look at. `blocking` is how much sits behind it, which is the
+ * difference between a nuisance and a problem.
+ *
+ * AT_RISK exists because the breach alert on its own arrives too late to act on.
+ * Fast-forwarding the seeded floor, an order sat on 350 minutes of slack in silence
+ * and was 1076 minutes late three days later. The warning is the useful half.
+ */
+async function scheduleRiskAlerts(user: SessionUser, exec: Exec = {}): Promise<Alert[]> {
+  const database = exec.tx ?? exec.db ?? defaultDb;
+  const manager = isManagerRole(user.role);
+  if (!manager && !user.stationId) return [];
+
+  const now = new Date();
+  const plant = await scheduleOpenWork(now, exec);
+  const causes = plantLateCauses(plant, now);
+  if (causes.length === 0) return [];
+
+  const rows = await database
+    .select({
+      taskId: workOrderTasks.id,
+      name: workOrderTasks.name,
+      jobNumber: workOrderTasks.jobNumber,
+      stationId: workOrderTasks.stationId,
+      stationName: stations.name,
+      workOrderId: workOrderTasks.workOrderId,
+      orderNumber: workOrders.orderNumber,
+    })
+    .from(workOrderTasks)
+    .innerJoin(workOrders, eq(workOrderTasks.workOrderId, workOrders.id))
+    .leftJoin(stations, eq(workOrderTasks.stationId, stations.id))
+    .where(
+      inArray(
+        workOrderTasks.id,
+        causes.map((c) => c.taskId)
+      )
+    );
+  const detail = new Map(rows.map((r) => [r.taskId, r]));
+
+  const result: Alert[] = [];
+  for (const c of causes) {
+    const d = detail.get(c.taskId);
+    if (!d) continue;
+    // A worker is told about their own bench, not about the whole plant.
+    if (!manager && d.stationId !== user.stationId) continue;
+
+    const span = formatSpan(Math.abs(c.lateByMinutes));
+    const behind =
+      c.blocking > 0 ? ` Holding ${c.blocking} step${c.blocking === 1 ? "" : "s"}.` : "";
+
+    result.push({
+      key: `risk:${c.taskId}:${c.severity}`,
+      id: null,
+      kind: "ORDER_AT_RISK",
+      severity: "attention",
+      title:
+        c.severity === "LATE"
+          ? `${d.orderNumber} is losing time: ${d.name}`
+          : `${d.orderNumber} is close to late: ${d.name}`,
+      detail:
+        c.severity === "LATE"
+          ? `Should have started ${span} ago.${behind}`
+          : `Has to start within ${span}.${behind}`,
+      taskId: c.taskId,
+      workOrderId: c.workOrderId,
+      orderNumber: d.orderNumber,
+      stationName: d.stationName,
+      at: now,
+      acknowledgeable: false,
+    });
+  }
+  return result;
+}
+
+/** Working minutes as something a person reads. A day is a shift, not 24 hours. */
+function formatSpan(minutes: number): string {
+  const days = Math.floor(minutes / 480);
+  const hours = Math.floor((minutes % 480) / 60);
+  const mins = Math.round(minutes % 60);
+  if (days > 0) return `${days} day${days === 1 ? "" : "s"}${hours > 0 ? ` ${hours}h` : ""}`;
+  if (hours > 0) return `${hours}h${mins > 0 ? ` ${mins}m` : ""}`;
+  return `${mins}m`;
 }

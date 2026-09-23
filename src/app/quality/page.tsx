@@ -22,6 +22,24 @@ const KIND_TONE: Record<string, "neutral" | "alert" | "quiet"> = {
   PRODUCED: "quiet",
 };
 
+/*
+  The table used to print the raw enum. ALLOCATE and PRODUCED mean nothing to a
+  supervisor, and a history nobody can read is a history nobody checks.
+*/
+const KIND_LABEL: Record<string, string> = {
+  PRODUCED: "Made",
+  ACCEPT: "Passed",
+  REWORK: "Sent for rework",
+  SCRAP: "Scrapped",
+  ALLOCATE: "Set aside for the next step",
+  DEALLOCATE: "Released again",
+  ISSUE_TO_PARENT: "Fitted into the unit",
+  RETURN_FROM_PARENT: "Taken back out",
+  HOLD: "Quarantined",
+  RELEASE_HOLD: "Let out of quarantine",
+  REJECT_INSTALLED: "Rejected after fitting",
+};
+
 export default async function QualityPage() {
   const user = await requireUser();
   const [queue, summary, history] = await Promise.all([
@@ -35,7 +53,7 @@ export default async function QualityPage() {
       <PageHeader
         eyebrow="Quality"
         title="Inspection"
-        subtitle="Work for parts marked 'requires inspection' stops here until someone passes it. Passing hands the quantity straight to whatever is waiting on it."
+        subtitle="Parts that need inspecting stop here until someone passes them."
       />
 
       <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -51,7 +69,7 @@ export default async function QualityPage() {
       </div>
 
       <section className="mt-9">
-        <SectionHeading note="Oldest due date first — the ones holding up an order are marked">
+        <SectionHeading>
           The queue
         </SectionHeading>
         <InspectionQueue rows={queue} canInspect={isManager(user.role)} />
@@ -59,14 +77,14 @@ export default async function QualityPage() {
 
       {history.length > 0 && (
         <section className="mt-10">
-          <SectionHeading note="Every verdict, with the name of whoever gave it">
+          <SectionHeading>
             Recent decisions
           </SectionHeading>
           <Panel className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[42rem]">
-                <thead className="bg-steel-50/60">
-                  <tr className="border-b border-steel-200">
+                <thead className="bg-gray-50/60">
+                  <tr className="border-b border-gray-200">
                     <th className={TH}>Verdict</th>
                     <th className={TH}>Part</th>
                     <th className={TH}>Step</th>
@@ -79,21 +97,23 @@ export default async function QualityPage() {
                   {history.map((h) => (
                     <tr key={h.id} className={TR}>
                       <td className={TD}>
-                        <Chip tone={KIND_TONE[h.kind] ?? "quiet"}>{h.kind}</Chip>
+                        <Chip tone={KIND_TONE[h.kind] ?? "quiet"}>
+                          {KIND_LABEL[h.kind] ?? h.kind}
+                        </Chip>
                       </td>
                       <td className={TD}>
-                        <p className="text-steel-700">{h.itemName}</p>
-                        <p className="tnum mt-0.5 text-xs text-steel-400">{h.orderNumber}</p>
+                        <p className="text-gray-700">{h.itemName}</p>
+                        <p className="tnum mt-0.5 text-xs text-gray-400">{h.orderNumber}</p>
                       </td>
-                      <td className={`${TD} text-steel-600`}>
+                      <td className={`${TD} text-gray-600`}>
                         {h.operationName}
                         {h.reason && (
-                          <p className="mt-0.5 text-xs text-steel-400">{h.reason}</p>
+                          <p className="mt-0.5 text-xs text-gray-400">{h.reason}</p>
                         )}
                       </td>
-                      <td className={`${TD} tnum text-right text-steel-700`}>{h.quantity}</td>
-                      <td className={`${TD} text-steel-600`}>{h.actorName ?? "—"}</td>
-                      <td className={`${TD} whitespace-nowrap text-steel-500`}>
+                      <td className={`${TD} tnum text-right text-gray-700`}>{h.quantity}</td>
+                      <td className={`${TD} text-gray-600`}>{h.actorName ?? "—"}</td>
+                      <td className={`${TD} whitespace-nowrap text-gray-500`}>
                         {formatWhen(h.createdAt)}
                       </td>
                     </tr>
